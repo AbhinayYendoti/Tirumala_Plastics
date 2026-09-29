@@ -58,3 +58,23 @@ export const removalMode = (usage: number): "delete" | "archive" => (usage > 0 ?
 export function salaryBalance(p: { monthlySalary: number; advances: number; salaryPaid: number }) {
   return round2(p.monthlySalary - p.advances - p.salaryPaid);
 }
+
+/** Indian financial year label for a date: April 2026 – March 2027 → "26-27". */
+export function financialYear(isoDate: string) {
+  const [y, m] = isoDate.split("-").map(Number);
+  const start = m >= 4 ? y : y - 1;
+  return `${String(start % 100).padStart(2, "0")}-${String((start + 1) % 100).padStart(2, "0")}`;
+}
+
+export const INVOICE_PREFIX = "TP";
+
+/** Next invoice number in the date's financial year, e.g. TP/26-27/004. Numbering restarts each April. */
+export function nextInvoiceNo(existing: (string | null)[], isoDate: string) {
+  const prefix = `${INVOICE_PREFIX}/${financialYear(isoDate)}/`;
+  const max = existing.reduce((m, no) => {
+    if (!no?.startsWith(prefix)) return m;
+    const n = Number(no.slice(prefix.length));
+    return Number.isInteger(n) && n > m ? n : m;
+  }, 0);
+  return `${prefix}${String(max + 1).padStart(3, "0")}`;
+}

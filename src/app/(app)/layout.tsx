@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { requireUser } from "@/lib/auth";
 import { Logo, LogoMark } from "@/components/logo";
 import { BottomNav, QuickAdd, SideNav } from "@/components/nav";
+import { DbWarmup } from "@/components/db-warmup";
 import { NavProgress } from "@/components/nav-progress";
 import { ToastProvider } from "@/components/toast";
 
@@ -15,13 +16,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <Suspense>
       <NavProgress />
     </Suspense>
+    <DbWarmup />
     <div className="min-h-dvh lg:grid lg:grid-cols-[250px_1fr]">
-      <aside className="no-print sticky top-0 hidden h-dvh flex-col gap-8 border-r border-line bg-paper px-4 py-6 lg:flex">
-        <Link href="/">
+      <aside className="no-print sticky top-0 hidden h-dvh flex-col gap-6 overflow-y-auto border-r border-line bg-paper px-4 py-5 lg:flex">
+        <Link href="/" className="shrink-0">
           <Logo />
         </Link>
         <SideNav />
-        <div className="mt-auto flex items-center gap-3 px-2 text-sm text-muted">
+        {/* Account stays pinned to the bottom, and the sidebar scrolls on short screens instead of hiding it. */}
+        <div className="mt-auto flex shrink-0 items-center gap-3 border-t border-line px-2 pt-4 text-sm text-muted">
           <UserButton /> Account
         </div>
       </aside>

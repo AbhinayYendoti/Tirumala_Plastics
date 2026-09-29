@@ -13,6 +13,7 @@ import {
   lastRates,
   listLoads,
   recentVehicles,
+  suggestInvoiceNo,
 } from "@/lib/queries";
 import { RecordActions } from "./record-actions";
 import { RemovableList } from "./removable-list";
@@ -51,7 +52,7 @@ export async function LoadListPage({ kind, searchParams }: { kind: LoadKind; sea
       {rows.length === 0 ? (
         <Empty>
           No loads in this period.{" "}
-          <Link className="font-medium text-maroon underline" href={`/${kind}/new`}>
+          <Link className="font-medium text-maroon underline hover:text-maroon-dark" href={`/${kind}/new`}>
             Add one
           </Link>
         </Empty>
@@ -98,15 +99,20 @@ async function formData(kind: LoadKind, keep?: { partyId: number; materialId: nu
 }
 
 export async function LoadNewPage({ kind }: { kind: LoadKind }) {
-  const { last, ...data } = await formData(kind);
+  const today = todayIST();
+  const [{ last, ...data }, invoiceNo] = await Promise.all([
+    formData(kind),
+    kind === "outward" ? suggestInvoiceNo(today) : Promise.resolve(undefined),
+  ]);
   return (
     <>
       <PageHeader title={`New ${kind} load`} subtitle={kind === "inward" ? "Truck arrived with scrap" : "Dispatch to a buyer"} />
       <LoadForm
         kind={kind}
         action={saveLoad.bind(null, kind, null)}
-        today={todayIST()}
+        today={today}
         defaults={last ? { materialId: last.materialId } : null}
+        suggestedInvoiceNo={invoiceNo}
         {...data}
       />
     </>
@@ -166,7 +172,7 @@ export async function LoadDetailPage({ kind, id }: { kind: LoadKind; id: number 
       <PageHeader
         title={`${kind === "inward" ? "Inward" : "Outward"} #${id}`}
         subtitle={
-          <Link href={`/parties/${party.id}`} className="text-maroon underline">
+          <Link href={`/parties/${party.id}`} className="text-maroon underline-offset-4 hover:underline">
             {party.name}
           </Link>
         }
@@ -184,7 +190,7 @@ export async function LoadDetailPage({ kind, id }: { kind: LoadKind; id: number 
         ))}
         {load.notes && <p className="px-4 py-3 text-sm text-ink/80">{load.notes}</p>}
       </Card>
-      <Card className="flex flex-wrap items-center gap-2 p-3">
+      <Card className="flex flex-wrap items-center gap-2 p-3 pr-20">
         <LinkButton href={`/${kind}/${id}/edit`}>
           <Pencil size={16} /> Edit
         </LinkButton>

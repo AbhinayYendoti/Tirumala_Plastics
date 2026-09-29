@@ -20,6 +20,7 @@ export function LoadForm({
   initial,
   defaults,
   secondary,
+  suggestedInvoiceNo,
 }: {
   kind: Kind;
   action: (prev: ActionState, fd: FormData) => Promise<ActionState>;
@@ -31,6 +32,7 @@ export function LoadForm({
   initial?: Partial<InwardLoad & OutwardLoad>;
   defaults?: { partyId?: number; materialId?: number } | null;
   secondary?: React.ReactNode;
+  suggestedInvoiceNo?: string;
 }) {
   const [state, formAction, pending] = useActionState(action, undefined);
   const isEdit = !!initial?.id;
@@ -156,7 +158,7 @@ export function LoadForm({
               <button
                 type="button"
                 onClick={() => setDeductionMode((m) => (m === "kg" ? "%" : "kg"))}
-                className="rounded-r-xl border border-l-0 border-line bg-ivory px-3 text-sm font-medium text-maroon"
+                className="rounded-r-xl border border-l-0 border-line bg-ivory px-3 text-sm font-medium text-maroon transition hover:bg-maroon/10"
               >
                 {deductionMode}
               </button>
@@ -178,8 +180,8 @@ export function LoadForm({
 
       {kind === "outward" ? (
         <Card className="grid gap-4 sm:grid-cols-3">
-          <Field label="Invoice no.">
-            <Input name="invoiceNo" defaultValue={initial?.invoiceNo ?? ""} />
+          <Field label="Invoice no." hint={isEdit ? "Must be unique" : "Next number this year · you can change it"}>
+            <Input name="invoiceNo" defaultValue={initial?.invoiceNo ?? suggestedInvoiceNo ?? ""} />
           </Field>
           <Field label="GST %">
             <Select name="gstRate" value={gstRate} onChange={(e) => setGstRate(e.target.value)}>
@@ -226,7 +228,7 @@ export function LoadForm({
               <NumberInput name="settledNow" placeholder="0" />
               <button
                 type="button"
-                className="shrink-0 rounded-xl border border-line px-3 text-sm text-maroon"
+                className="shrink-0 rounded-xl border border-line px-3 text-sm text-maroon transition hover:border-maroon/40 hover:bg-maroon/5"
                 onClick={(e) => {
                   const input = e.currentTarget.previousElementSibling as HTMLInputElement;
                   input.value = String(total);

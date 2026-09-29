@@ -1,38 +1,19 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "@/db";
-import {
-  expenses,
-  inwardLoads,
-  materials,
-  outwardLoads,
-  parties,
-  payments,
-  salaryTxns,
-  workers,
-} from "@/db/schema";
+import { materials, parties, payments, workers } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { usageCount } from "@/lib/queries";
+import { RECORD_TABLES } from "@/lib/records";
+import type { DeleteResult, RecordKind, Snapshot, SnapshotRow } from "@/lib/snapshot";
 import { audit } from "./util";
 
-const TABLES = {
-  expense: expenses,
-  payment: payments,
-  salary_txn: salaryTxns,
-  inward_load: inwardLoads,
-  outward_load: outwardLoads,
-  party: parties,
-  worker: workers,
-  material: materials,
-} as const;
-
-export type RecordKind = keyof typeof TABLES;
-type Row = Record<string, unknown> & { id: number };
-/** Everything a delete removed, in insert order, so Undo can put it back exactly. */
-export type Snapshot = { table: RecordKind; rows: Row[] }[];
-export type DeleteResult = { ok: true; snapshot: Snapshot; note?: string } | { ok: false; error: string };
+// A "use server" file may only export async functions (Turbopack rejects even type re-exports),
+// so the shared types live in @/lib/snapshot.
+const TABLES = RECORD_TABLES;
+type Row = SnapshotRow;
 
 const LABEL: Record<RecordKind, string> = {
   expense: "expense",
@@ -59,15 +40,13 @@ export async function deleteRecord(kind: RecordKind, id: number): Promise<Delete
 
   if (kind === "inward_load" || kind === "outward_load") {
     const table = TABLES[kind];
+    const linkColumn = kind === "inward_load" ? payments.inwardLoadId : payments.outwardLoadId;
+    // Keep a copy of the load's on-the-spot payment for Undo. The database removes it
+    // together with the load (ON DELETE CASCADE), in the same statement.
+    const linked = await db.select().from(payments).where(eq(linkColumn, id));
     const [load] = await db.delete(table).where(eq(table.id, id)).returning();
     if (!load) return { ok: false, error: "Already deleted" };
     snapshot.push({ table: kind, rows: [load as Row] });
-    // The "paid / received now" entry saved with the load goes with it.
-    const ref = `${kind === "inward_load" ? "Inward" : "Outward"} #${id}`;
-    const linked = await db
-      .delete(payments)
-      .where(and(eq(payments.partyId, load.partyId), eq(payments.reference, ref)))
-      .returning();
     if (linked.length) {
       snapshot.push({ table: "payment", rows: linked as Row[] });
       note = "with its on-the-spot payment";
@@ -82,18 +61,6 @@ export async function deleteRecord(kind: RecordKind, id: number): Promise<Delete
   await audit(user.email, "delete", kind, id);
   revalidatePath("/", "layout");
   return { ok: true, snapshot, note };
-}
-
-export async function restoreRecord(snapshot: Snapshot) {
-  const user = await requireUser();
-  for (const { table, rows } of snapshot) {
-    if (!rows.length) continue;
-    const t = TABLES[table];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await db.insert(t).values(rows as any).onConflictDoNothing();
-    await audit(user.email, "restore", table, rows[0].id);
-  }
-  revalidatePath("/", "layout");
 }
 
 /** Archive hides a party / worker / material from pickers and default lists; history stays. */

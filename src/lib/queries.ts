@@ -11,7 +11,7 @@ import {
   salaryTxns,
   workers,
 } from "@/db/schema";
-import { partyBalance, salaryBalance } from "@/lib/calc";
+import { INVOICE_PREFIX, financialYear, nextInvoiceNo, partyBalance, salaryBalance } from "@/lib/calc";
 
 export type LoadKind = "inward" | "outward";
 export type Range = { from: string; to: string };
@@ -90,6 +90,19 @@ export async function lastLoad(kind: LoadKind) {
   const t = loadTable(kind);
   const [row] = await db.select({ partyId: t.partyId, materialId: t.materialId }).from(t).orderBy(desc(t.id)).limit(1);
   return row ?? null;
+}
+
+/** Suggested invoice number for a new outward load, continuing this financial year's series. */
+export async function suggestInvoiceNo(isoDate: string) {
+  const prefix = `${INVOICE_PREFIX}/${financialYear(isoDate)}/`;
+  const rows = await db
+    .select({ no: outwardLoads.invoiceNo })
+    .from(outwardLoads)
+    .where(sql`${outwardLoads.invoiceNo} like ${prefix + "%"}`);
+  return nextInvoiceNo(
+    rows.map((r) => r.no),
+    isoDate,
+  );
 }
 
 export async function recentVehicles() {

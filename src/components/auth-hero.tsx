@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { BUSINESS } from "@/lib/business";
+import { DbWarmup } from "./db-warmup";
 import { LogoMark } from "./logo";
 
 const MODULES = ["Loads", "Khata", "Payroll", "Expenses"];
@@ -13,6 +14,8 @@ const KOLAM = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'
 export function AuthShell({ children }: { children: ReactNode }) {
   return (
     <main className="min-h-dvh bg-ivory lg:grid lg:grid-cols-[1.1fr_1fr]">
+      {/* Wakes the database while they type their password. */}
+      <DbWarmup />
       <section
         className="relative flex min-h-[46dvh] flex-col items-center justify-center overflow-hidden rounded-b-[2.5rem] px-6 pb-16 pt-12 text-center lg:min-h-dvh lg:rounded-none lg:pb-12"
         style={{

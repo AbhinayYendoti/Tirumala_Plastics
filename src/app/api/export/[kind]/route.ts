@@ -10,7 +10,9 @@ function toCsv(rows: Row[]) {
   if (rows.length === 0) return "No data\n";
   const headers = Object.keys(rows[0]);
   const esc = (v: unknown) => {
-    const s = v == null ? "" : String(v);
+    let s = v == null ? "" : String(v);
+    // Stop Excel treating typed text like "=SUM(...)" or "+91..." as a formula.
+    if (typeof v === "string" && /^[=+\-@\t\r]/.test(s)) s = `'${s}`;
     return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   };
   return [headers.join(","), ...rows.map((r) => headers.map((h) => esc(r[h])).join(","))].join("\n") + "\n";

@@ -2,11 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { eq } from "drizzle-orm";
+import { and, eq, ne, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import { inwardLoads, outwardLoads, parties, payments } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
+import type { LoadKind } from "@/lib/queries";
 import { computeGst, computeLoad } from "@/lib/calc";
 import {
   type ActionState,
@@ -14,6 +15,7 @@ import {
   firstError,
   formObject,
   isoDate,
+  isUniqueViolation,
   money,
   optionalMoney,
   optionalText,
@@ -22,7 +24,6 @@ import {
   resolveParty,
 } from "./util";
 
-export type LoadKind = "inward" | "outward";
 
 const loadSchema = z
   .object({
@@ -60,6 +61,18 @@ export async function saveLoad(
   if (!parsed.success) return { error: firstError(parsed.error) };
   const v = parsed.data;
 
+  const table = kind === "inward" ? inwardLoads : outwardLoads;
+  const linkColumn = kind === "inward" ? payments.inwardLoadId : payments.outwardLoadId;
+
+  // Check the invoice number first, so a clash can't leave a half-saved entry (like a new party) behind.
+  if (kind === "outward" && v.invoiceNo) {
+    const [clash] = await db
+      .select({ id: outwardLoads.id })
+      .from(outwardLoads)
+      .where(and(eq(outwardLoads.invoiceNo, v.invoiceNo), id ? ne(outwardLoads.id, id) : undefined));
+    if (clash) return { error: `Invoice no. ${v.invoiceNo} is already used on outward load #${clash.id}` };
+  }
+
   let loadId: number;
   try {
     const partyId = await resolveParty(v.partyId, v.newPartyName, kind === "inward" ? "supplier" : "buyer");
@@ -79,47 +92,52 @@ export async function saveLoad(
       amount,
       notes: v.notes,
     };
-
+    let row;
     if (kind === "inward") {
-      const row = { ...base, billNo: v.billNo };
-      if (id) {
-        await db.update(inwardLoads).set(row).where(eq(inwardLoads.id, id));
-        loadId = id;
-      } else {
-        [{ id: loadId }] = await db
-          .insert(inwardLoads)
-          .values({ ...row, createdBy: user.email })
-          .returning({ id: inwardLoads.id });
-      }
+      row = { ...base, billNo: v.billNo };
     } else {
       const [party] = await db.select({ stateCode: parties.stateCode }).from(parties).where(eq(parties.id, partyId));
       const gst = computeGst(amount, v.gstRate, party?.stateCode);
-      const row = { ...base, invoiceNo: v.invoiceNo, ewayBillNo: v.ewayBillNo, gstRate: v.gstRate, ...gst };
-      if (id) {
-        await db.update(outwardLoads).set(row).where(eq(outwardLoads.id, id));
-        loadId = id;
-      } else {
-        [{ id: loadId }] = await db
-          .insert(outwardLoads)
-          .values({ ...row, createdBy: user.email })
-          .returning({ id: outwardLoads.id });
-      }
+      row = { ...base, invoiceNo: v.invoiceNo, ewayBillNo: v.ewayBillNo, gstRate: v.gstRate, ...gst };
     }
 
-    // Cash paid / received on the spot is recorded as a normal payment against the party.
-    if (!id && v.settledNow > 0) {
-      await db.insert(payments).values({
-        date: v.date,
-        partyId,
-        direction: kind === "inward" ? "paid" : "received",
-        amount: v.settledNow,
-        mode: v.settledMode,
-        reference: `${kind === "inward" ? "Inward" : "Outward"} #${loadId}`,
-        createdBy: user.email,
-      });
+    // Each branch below is one db.batch: Neon runs it as a single transaction,
+    // so a load and its on-the-spot payment are saved (or changed) together or not at all.
+    if (id) {
+      loadId = id;
+      await db.batch([
+        db.update(table).set(row as Partial<typeof table.$inferInsert>).where(eq(table.id, id)),
+        // If the load moved to another party, its on-the-spot payment moves with it.
+        db.update(payments).set({ partyId }).where(eq(linkColumn, id)),
+      ]);
+    } else {
+      // Reserve the id up front so the payment can point at the load inside the same transaction.
+      const seq = await db.execute<{ id: number }>(
+        sql`select nextval(pg_get_serial_sequence(${kind === "inward" ? "inward_loads" : "outward_loads"}, 'id'))::int as id`,
+      );
+      loadId = Number(seq.rows[0].id);
+      const insertLoad = db.insert(table).values({ ...row, id: loadId, createdBy: user.email } as typeof table.$inferInsert);
+      if (v.settledNow > 0) {
+        await db.batch([
+          insertLoad,
+          db.insert(payments).values({
+            date: v.date,
+            partyId,
+            direction: kind === "inward" ? "paid" : "received",
+            amount: v.settledNow,
+            mode: v.settledMode,
+            reference: `${kind === "inward" ? "Inward" : "Outward"} #${loadId}`,
+            [kind === "inward" ? "inwardLoadId" : "outwardLoadId"]: loadId,
+            createdBy: user.email,
+          }),
+        ]);
+      } else {
+        await insertLoad;
+      }
     }
     await audit(user.email, id ? "update" : "create", `${kind}_load`, loadId);
   } catch (e) {
+    if (isUniqueViolation(e)) return { error: `Invoice no. ${v.invoiceNo} is already used on another load` };
     return { error: e instanceof Error ? e.message : "Could not save" };
   }
 

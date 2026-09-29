@@ -38,8 +38,8 @@ export function RangeFilter({ path, range }: { path: string; range: Range }) {
               key={p.key}
               href={`${path}?from=${p.from}&to=${p.to}`}
               className={cx(
-                "shrink-0 rounded-full border px-3.5 py-1.5 text-sm",
-                active ? "border-maroon bg-maroon text-white" : "border-line bg-paper text-ink/80",
+                "shrink-0 rounded-full border px-3.5 py-1.5 text-sm transition",
+                active ? "border-maroon bg-maroon text-white" : "border-line bg-paper text-ink/80 hover:border-maroon/40 hover:bg-maroon/5 hover:text-maroon",
               )}
             >
               {p.label}
@@ -61,7 +61,9 @@ export function RangeFilter({ path, range }: { path: string; range: Range }) {
           defaultValue={range.to}
           className="rounded-lg border border-line bg-paper px-2 py-1.5"
         />
-        <button className="rounded-lg border border-line bg-paper px-3 py-1.5 font-medium text-maroon">Show</button>
+        <button className="rounded-lg border border-line bg-paper px-3 py-1.5 font-medium text-maroon transition hover:border-maroon/40 hover:bg-maroon/5">
+          Show
+        </button>
       </form>
     </div>
   );

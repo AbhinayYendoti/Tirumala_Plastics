@@ -9,6 +9,7 @@ import {
   timestamp,
   boolean,
   index,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 
 const money = (name: string) => numeric(name, { precision: 14, scale: 2, mode: "number" });
@@ -94,7 +95,12 @@ export const outwardLoads = pgTable(
     igst: money("igst").notNull().default(0),
     total: money("total").notNull(),
   },
-  (t) => [index("outward_date_idx").on(t.date), index("outward_party_idx").on(t.partyId)],
+  (t) => [
+    index("outward_date_idx").on(t.date),
+    index("outward_party_idx").on(t.partyId),
+    // Two loads can never share an invoice number (blank ones are allowed).
+    uniqueIndex("outward_invoice_no_uq").on(t.invoiceNo),
+  ],
 );
 
 export const payments = pgTable(
@@ -110,10 +116,19 @@ export const payments = pgTable(
     mode: payMode("mode").notNull().default("cash"),
     reference: text("reference"),
     notes: text("notes"),
+    // Set when the money was paid / received on the spot while saving a load.
+    // Deleting the load removes the payment with it.
+    inwardLoadId: integer("inward_load_id").references(() => inwardLoads.id, { onDelete: "cascade" }),
+    outwardLoadId: integer("outward_load_id").references(() => outwardLoads.id, { onDelete: "cascade" }),
     createdBy: text("created_by"),
     createdAt: createdAt(),
   },
-  (t) => [index("payments_date_idx").on(t.date), index("payments_party_idx").on(t.partyId)],
+  (t) => [
+    index("payments_date_idx").on(t.date),
+    index("payments_party_idx").on(t.partyId),
+    index("payments_inward_load_idx").on(t.inwardLoadId),
+    index("payments_outward_load_idx").on(t.outwardLoadId),
+  ],
 );
 
 export const workers = pgTable("workers", {

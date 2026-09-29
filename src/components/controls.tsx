@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { Trash2 } from "lucide-react";
+import { Printer, Trash2 } from "lucide-react";
 import { Spinner } from "./spinner";
 import { cx } from "./ui";
 
@@ -52,16 +52,16 @@ export function PrintButton() {
     <button
       type="button"
       onClick={() => window.print()}
-      className="no-print rounded-xl bg-maroon px-4 py-2.5 text-sm font-medium text-white"
+      className="no-print inline-flex items-center gap-2 rounded-xl bg-maroon px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-maroon-dark hover:shadow-md active:scale-[0.97]"
     >
-      Print / Save PDF
+      <Printer size={16} /> Print / Save PDF
     </button>
   );
 }
 
 export function BackButton() {
   return (
-    <button type="button" onClick={() => history.back()} className="text-sm text-maroon underline">
+    <button type="button" onClick={() => history.back()} className="text-sm text-maroon underline-offset-4 transition hover:text-maroon-dark hover:underline">
       ← Back
     </button>
   );

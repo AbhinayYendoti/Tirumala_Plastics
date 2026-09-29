@@ -8,7 +8,7 @@ const btnBase =
   "inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-[15px] font-medium transition duration-150 active:scale-[0.97] disabled:opacity-60 aria-busy:cursor-wait";
 export const btn = {
   primary: `${btnBase} bg-maroon text-white hover:bg-maroon-dark`,
-  secondary: `${btnBase} border border-line bg-paper text-ink hover:bg-ivory`,
+  secondary: `${btnBase} border border-line bg-paper text-ink hover:border-maroon/40 hover:bg-maroon/5 hover:text-maroon`,
   danger: `${btnBase} bg-outflow text-white`,
   ghost: `${btnBase} text-maroon hover:bg-maroon/5`,
 };

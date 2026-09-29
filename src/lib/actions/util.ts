@@ -24,6 +24,12 @@ export function formObject(fd: FormData) {
   return Object.fromEntries(fd.entries()) as Record<string, string>;
 }
 
+/** Postgres "duplicate key" (23505), whether drizzle wraps the driver error or not. */
+export function isUniqueViolation(e: unknown) {
+  const err = e as { code?: string; cause?: { code?: string } } | null;
+  return err?.code === "23505" || err?.cause?.code === "23505";
+}
+
 export function firstError(error: z.ZodError) {
   const issue = error.issues[0];
   const field = issue?.path.join(".");

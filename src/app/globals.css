@@ -251,3 +251,17 @@ textarea {
     margin: 12mm;
   }
 }
+
+/* Tailwind v4 dropped the pointer cursor on buttons; bring it back for everything clickable. */
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  label:has(> input[type="radio"]),
+  label:has(> input[type="checkbox"]),
+  select {
+    cursor: pointer;
+  }
+  button:disabled {
+    cursor: not-allowed;
+  }
+}

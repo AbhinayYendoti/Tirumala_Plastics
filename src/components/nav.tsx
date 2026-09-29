@@ -69,7 +69,7 @@ export function SideNav() {
           href={href}
           onClick={() => setPending(href)}
           className={cx(
-            "flex items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] transition-colors duration-150",
+            "flex items-center gap-3 rounded-xl px-3 py-2 text-[15px] transition-colors duration-150",
             isActive(path, href) ? "bg-maroon text-white" : "text-ink/80 hover:bg-maroon/5",
           )}
         >
@@ -106,14 +106,14 @@ export function BottomNav() {
             href={href}
             onClick={() => setPending(href)}
             className={cx(
-              "flex flex-col items-center gap-0.5 py-2 text-[11px] transition-colors duration-150 active:scale-95",
-              active ? "text-maroon" : "text-muted",
+              "group flex flex-col items-center gap-0.5 py-2 text-[11px] transition-colors duration-150 active:scale-95",
+              active ? "text-maroon" : "text-muted hover:text-maroon",
             )}
           >
             <span
               className={cx(
                 "flex h-7 w-12 items-center justify-center rounded-full transition-all duration-200",
-                active ? "bg-maroon/10" : "bg-transparent",
+                active ? "bg-maroon/10" : "bg-transparent group-hover:bg-maroon/5",
               )}
             >
               <Icon size={21} strokeWidth={active ? 2.4 : 1.8} />
@@ -133,7 +133,7 @@ export function MoreLinks() {
         <Link
           key={href}
           href={href}
-          className="flex flex-col items-start gap-3 rounded-2xl border border-line bg-paper p-4 transition active:scale-[0.97] active:bg-ivory"
+          className="flex flex-col items-start gap-3 rounded-2xl border border-line bg-paper p-4 transition hover:-translate-y-0.5 hover:border-maroon/40 hover:shadow-sm active:scale-[0.97] active:bg-ivory"
         >
           <Icon className="text-maroon" />
           <span className="font-medium">{label}</span>
@@ -168,7 +168,7 @@ export function QuickAdd() {
               href={href}
               onClick={() => setOpen(false)}
               style={{ animationDelay: `${(QUICK.length - 1 - i) * 30}ms` }}
-              className="flex origin-bottom-right animate-scale-in items-center gap-3 rounded-full bg-paper py-2.5 pl-4 pr-5 font-medium shadow-lg ring-1 ring-line active:scale-95"
+              className="flex origin-bottom-right animate-scale-in items-center gap-3 rounded-full bg-paper py-2.5 pl-4 pr-5 font-medium shadow-lg ring-1 ring-line transition hover:bg-ivory hover:text-maroon hover:ring-maroon/40 active:scale-95"
             >
               <Icon size={18} className="text-maroon" />
               {label}
@@ -177,7 +177,7 @@ export function QuickAdd() {
         <button
           aria-label={open ? "Close quick add" : "Quick add"}
           onClick={() => setOpen((o) => !o)}
-          className="flex h-14 w-14 items-center justify-center rounded-full bg-maroon text-white shadow-xl shadow-maroon/30 transition active:scale-90"
+          className="flex h-14 w-14 items-center justify-center rounded-full bg-maroon text-white shadow-xl shadow-maroon/30 transition duration-200 hover:scale-105 hover:bg-maroon-dark hover:shadow-2xl hover:shadow-maroon/40 active:scale-90"
         >
           <Plus size={26} className={cx("transition-transform duration-200", open && "rotate-45")} />
         </button>

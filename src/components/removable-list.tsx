@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { startTransition, useOptimistic, useState, type ReactNode } from "react";
 import { ChevronRight, Pencil } from "lucide-react";
 import type { Expense, Payment, SalaryTxn } from "@/db/schema";
-import { deleteRecord, restoreRecord, type RecordKind } from "@/lib/actions/records";
+import { deleteRecord } from "@/lib/actions/records";
+import type { RecordKind } from "@/lib/snapshot";
 import { ConfirmDelete } from "./controls";
+import { useUndo } from "./record-actions";
 import { ExpenseForm } from "./expense-form";
 import { PaymentForm, type PartyOption } from "./payment-form";
 import { Sheet } from "./sheet";
@@ -47,7 +48,7 @@ export function RemovableList({
   const [leaving, setLeaving] = useState<Set<number>>(new Set());
   const [editing, setEditing] = useState<Row | null>(null);
   const toast = useToast();
-  const router = useRouter();
+  const undo = useUndo();
 
   function onDelete(id: number) {
     setLeaving((s) => new Set(s).add(id));
@@ -67,17 +68,10 @@ export function RemovableList({
             toast({ message: res.error, tone: "error" });
             return;
           }
+          setLeaving(new Set());
           toast({
             message: `${label} deleted${res.note ? ` ${res.note}` : ""}`,
-            action: {
-              label: "Undo",
-              onClick: () =>
-                startTransition(async () => {
-                  await restoreRecord(res.snapshot);
-                  setLeaving(new Set());
-                  router.refresh();
-                }),
-            },
+            action: { label: "Undo", onClick: () => undo(res.snapshot, label) },
           });
         });
       }, 200),
@@ -112,7 +106,7 @@ export function RemovableList({
           return (
             <div key={r.id} className={cx("group flex items-center", leaving.has(r.id) && "animate-row-out")}>
               {r.href ? (
-                <Link href={r.href} className="flex min-w-0 flex-1 items-center gap-3 py-3 pl-4 pr-1 active:bg-ivory">
+                <Link href={r.href} className="flex min-w-0 flex-1 items-center gap-3 py-3 pl-4 pr-1 transition hover:bg-ivory/60 active:bg-ivory">
                   {body}
                 </Link>
               ) : r.record && edit ? (

@@ -33,15 +33,20 @@ The app remembers the last rate per material and recent vehicle numbers. You can
 
 ## Deploy (Vercel)
 
-1. Push to GitHub and import the repo in Vercel.
-2. Add the same env vars as in `.env` (Production + Preview).
-3. Deploy. On the phone, open the site and choose **Add to Home Screen**.
+1. Push to a **private** GitHub repo and import it in Vercel (framework: Next.js, all defaults).
+2. Add the env vars from `.env.example` for **Production** (and Preview if you use preview links). Use `ALLOWED_EMAILS` with the owners' emails.
+3. Deploy. `vercel.json` pins the server to Singapore (`sin1`), next to the Neon database.
+4. Clerk: add the Vercel URL under *Domains*; in *Sessions → Customize session token* add
+   `{"email": "{{user.primary_email_address}}", "name": "{{user.first_name}}"}` (saves a Clerk API call per request).
+5. On each phone, open the site and choose **Add to Home Screen**.
+
+Schema changes: run `npm run db:generate`, commit the new file in `./drizzle`, then `npm run db:migrate` against the production database **before** deploying the code that uses it.
 
 No separate backend on Render is needed; server actions and route handlers run on Vercel.
 
 ## Scripts
 
-`npm run dev` · `build` · `lint` · `test` (Vitest: weighbridge, GST, balances) · `db:generate` (after schema changes) · `db:migrate` · `db:studio`
+`npm run dev` (Turbopack, writes to `.next-dev`) · `build` · `preview` (production build on :3001) · `lint` · `test` (unit) · `test:e2e` (every business flow against `DATABASE_URL`; cleans up after itself) · `db:generate` · `db:migrate` · `db:studio`
 
 ## Notes
 

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
-import { CheckCircle2, X } from "lucide-react";
+import { AlertCircle, CheckCircle2, X } from "lucide-react";
 
 type ToastAction = { label: string; href: string } | { label: string; onClick: () => void };
 type Toast = { id: number; message: string; action?: ToastAction; tone?: "success" | "error" };
@@ -15,15 +15,35 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const seq = useRef(0);
 
-  const dismiss = useCallback((id: number) => setToasts((all) => all.filter((t) => t.id !== id)), []);
+  const timers = useRef(new Map<number, ReturnType<typeof setTimeout>>());
+
+  const dismiss = useCallback((id: number) => {
+    clearTimeout(timers.current.get(id));
+    timers.current.delete(id);
+    setToasts((all) => all.filter((t) => t.id !== id));
+  }, []);
+  const schedule = useCallback(
+    (id: number, ms: number) => {
+      clearTimeout(timers.current.get(id));
+      timers.current.set(
+        id,
+        setTimeout(() => dismiss(id), ms),
+      );
+    },
+    [dismiss],
+  );
   const show = useCallback(
     (t: Omit<Toast, "id">) => {
       const id = ++seq.current;
       setToasts((all) => [...all.slice(-2), { ...t, id }]);
-      setTimeout(() => dismiss(id), t.action ? 5000 : 2800);
+      // Undo needs time to read and reach, especially on a phone.
+      schedule(id, t.action ? 8000 : t.tone === "error" ? 5000 : 2800);
     },
-    [dismiss],
+    [schedule],
   );
+  // Holding a finger / pointer on a toast keeps it open.
+  const hold = (id: number) => clearTimeout(timers.current.get(id));
+  const release = (id: number) => schedule(id, 3000);
 
   return (
     <ToastContext.Provider value={show}>
@@ -36,13 +56,19 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         {toasts.map((t) => (
           <div
             key={t.id}
+            onPointerEnter={() => hold(t.id)}
+            onPointerLeave={() => release(t.id)}
             className="pointer-events-auto flex w-full max-w-sm animate-toast-in items-center gap-3 rounded-2xl bg-ink px-4 py-3 text-sm text-white shadow-xl"
           >
-            <CheckCircle2 size={18} className={t.tone === "error" ? "text-outflow" : "text-gold"} />
+            {t.tone === "error" ? (
+              <AlertCircle size={18} className="shrink-0 text-[#ff8a73]" />
+            ) : (
+              <CheckCircle2 size={18} className="shrink-0 text-gold" />
+            )}
             <span className="flex-1">{t.message}</span>
             {t.action &&
               ("href" in t.action ? (
-                <Link href={t.action.href} onClick={() => dismiss(t.id)} className="font-semibold text-gold">
+                <Link href={t.action.href} onClick={() => dismiss(t.id)} className="font-semibold text-gold hover:underline">
                   {t.action.label}
                 </Link>
               ) : (
@@ -56,7 +82,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                   {t.action.label}
                 </button>
               ))}
-            <button onClick={() => dismiss(t.id)} aria-label="Dismiss" className="text-white/50">
+            <button onClick={() => dismiss(t.id)} aria-label="Dismiss" className="text-white/50 transition hover:text-white">
               <X size={16} />
             </button>
           </div>

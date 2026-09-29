@@ -31,13 +31,16 @@ export default async function WorkersPage({ searchParams }: { searchParams: Sear
         action={<LinkButton href="/workers/new">+ Worker</LinkButton>}
       />
       <div className="mb-4 flex items-center justify-between rounded-2xl border border-line bg-paper px-2 py-1.5">
-        <Link href={qs(prev)} className="rounded-lg p-2 text-maroon" aria-label="Previous month">
+        <Link href={qs(prev)} className="rounded-lg p-2 text-maroon transition hover:bg-maroon/5" aria-label="Previous month">
           <ChevronLeft />
         </Link>
         <span className="font-serif text-lg">{formatMonth(month)}</span>
         <Link
           href={qs(next)}
-          className={cx("rounded-lg p-2 text-maroon", month >= current && "pointer-events-none opacity-30")}
+          className={cx(
+            "rounded-lg p-2 text-maroon transition hover:bg-maroon/5",
+            month >= current && "pointer-events-none opacity-30",
+          )}
           aria-label="Next month"
         >
           <ChevronRight />
@@ -53,7 +56,7 @@ export default async function WorkersPage({ searchParams }: { searchParams: Sear
             href={`/workers?month=${month}${t.key ? `&show=${t.key}` : ""}`}
             className={cx(
               "rounded-full border px-3.5 py-1.5 text-sm transition",
-              (sp.show ?? "") === t.key ? "border-maroon bg-maroon text-white" : "border-line bg-paper",
+              (sp.show ?? "") === t.key ? "border-maroon bg-maroon text-white" : "border-line bg-paper hover:border-maroon/40 hover:bg-maroon/5 hover:text-maroon",
             )}
           >
             {t.label}
@@ -76,7 +79,7 @@ export default async function WorkersPage({ searchParams }: { searchParams: Sear
             <Link
               key={w.id}
               href={`/workers/${w.id}?month=${month}`}
-              className="flex items-center gap-3 px-4 py-3 active:bg-ivory"
+              className="flex items-center gap-3 px-4 py-3 transition hover:bg-ivory/60 active:bg-ivory"
             >
               <div className="min-w-0 flex-1">
                 <div className="font-medium">{w.name}</div>

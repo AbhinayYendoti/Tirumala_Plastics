@@ -103,7 +103,7 @@ export default async function WorkerPage({
           }))}
         />
       )}
-      <div className="mt-8 flex items-center justify-between gap-3 border-t border-line pt-4 text-sm text-muted">
+      <div className="mt-8 flex items-center justify-between gap-3 border-t border-line pb-2 pr-20 pt-4 text-sm text-muted">
         <span>
           {txns.length > 0
             ? "Left the job? Archive keeps the salary history."

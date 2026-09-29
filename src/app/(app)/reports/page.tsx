@@ -91,7 +91,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
             <a
               key={e.key}
               href={`/api/export/${e.key}?from=${range.from}&to=${range.to}`}
-              className="inline-flex items-center gap-2 rounded-xl border border-line px-3.5 py-2.5 text-sm"
+              className="inline-flex items-center gap-2 rounded-xl border border-line bg-paper px-3.5 py-2.5 text-sm transition hover:border-maroon/40 hover:bg-maroon/5 hover:text-maroon active:scale-[0.97]"
             >
               <Download size={15} /> {e.label}
             </a>

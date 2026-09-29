@@ -48,8 +48,8 @@ export default async function PartiesPage({ searchParams }: { searchParams: Sear
             key={t.key}
             href={`/parties?tab=${t.key}`}
             className={cx(
-              "rounded-full border px-3.5 py-1.5 text-sm",
-              tab === t.key ? "border-maroon bg-maroon text-white" : "border-line bg-paper",
+              "rounded-full border px-3.5 py-1.5 text-sm transition",
+              tab === t.key ? "border-maroon bg-maroon text-white" : "border-line bg-paper hover:border-maroon/40 hover:bg-maroon/5 hover:text-maroon",
             )}
           >
             {t.label}
@@ -70,7 +70,7 @@ export default async function PartiesPage({ searchParams }: { searchParams: Sear
       ) : (
         <Card className="stagger divide-y divide-line p-0">
           {rows.map((p) => (
-            <Link key={p.id} href={`/parties/${p.id}`} className="flex items-center gap-3 px-4 py-3 active:bg-ivory">
+            <Link key={p.id} href={`/parties/${p.id}`} className="flex items-center gap-3 px-4 py-3 transition hover:bg-ivory/60 active:bg-ivory">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <span className="truncate font-medium">{p.name}</span>

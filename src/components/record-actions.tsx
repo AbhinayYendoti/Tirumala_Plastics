@@ -3,17 +3,43 @@
 import { useRouter } from "next/navigation";
 import { startTransition, useTransition } from "react";
 import { Archive, ArchiveRestore } from "lucide-react";
-import { deleteRecord, restoreRecord, setArchived, type RecordKind } from "@/lib/actions/records";
+import { deleteRecord, setArchived } from "@/lib/actions/records";
+import type { RecordKind, Snapshot } from "@/lib/snapshot";
 import { removalMode } from "@/lib/calc";
 import { ConfirmDelete } from "./controls";
 import { Spinner } from "./spinner";
 import { useToast } from "./toast";
 import { Badge, cx } from "./ui";
 
-/** Delete with an Undo toast. Used by list rows, sheets and detail pages alike. */
+/** Puts back whatever a delete removed, with feedback either way. */
+export function useUndo() {
+  const toast = useToast();
+  const router = useRouter();
+
+  // A plain fetch rather than a server action: server actions wait behind any
+  // navigation still in flight (e.g. the jump back to the list after deleting).
+  return async function undo(snapshot: Snapshot, label: string) {
+    try {
+      const res = await fetch("/api/records/restore", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(snapshot),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      toast({ message: `${label} restored` });
+      router.refresh();
+    } catch (e) {
+      console.error("[undo] restore failed", e);
+      toast({ message: `Couldn't restore the ${label.toLowerCase()}. Please add it again.`, tone: "error" });
+    }
+  };
+}
+
+/** Delete with an Undo toast. Used by sheets and detail pages. */
 export function useRemove() {
   const toast = useToast();
   const router = useRouter();
+  const undo = useUndo();
 
   return async function remove(kind: RecordKind, id: number, opts: { label: string; goTo?: string }) {
     const res = await deleteRecord(kind, id);
@@ -24,15 +50,7 @@ export function useRemove() {
     if (opts.goTo) router.push(opts.goTo);
     toast({
       message: `${opts.label} deleted${res.note ? ` ${res.note}` : ""}`,
-      action: {
-        label: "Undo",
-        onClick: () =>
-          startTransition(async () => {
-            await restoreRecord(res.snapshot);
-            toast({ message: `${opts.label} restored` });
-            router.refresh();
-          }),
-      },
+      action: { label: "Undo", onClick: () => undo(res.snapshot, opts.label) },
     });
     return true;
   };

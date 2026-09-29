@@ -14,7 +14,7 @@ export default function NotAllowed() {
         <h2 className="font-serif text-2xl">This account can&apos;t open the register</h2>
         <p className="mt-2 text-sm text-muted">Sign in with the owner&apos;s email address to continue.</p>
         <SignOutButton redirectUrl="/sign-in">
-          <button className="mt-6 w-full rounded-xl bg-maroon px-5 py-3 font-medium text-white transition active:scale-[0.98]">
+          <button className="mt-6 w-full rounded-xl bg-maroon px-5 py-3 font-medium text-white transition hover:bg-maroon-dark active:scale-[0.98]">
             Use another account
           </button>
         </SignOutButton>

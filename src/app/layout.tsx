@@ -10,6 +10,7 @@ const lora = Lora({ variable: "--font-lora", subsets: ["latin"], style: ["normal
 export const metadata: Metadata = {
   title: { default: "Tirumala Plastics", template: "%s · Tirumala Plastics" },
   description: "Daily register for loads, salaries and expenses",
+  robots: { index: false, follow: false },
   appleWebApp: { capable: true, title: "Tirumala Plastics", statusBarStyle: "default" },
 };
 

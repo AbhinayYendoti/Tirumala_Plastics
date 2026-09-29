@@ -114,7 +114,7 @@ export default async function PartyPage({ params }: { params: Promise<{ id: stri
       )}
       <p className="mt-3 text-xs text-muted">Cr = we owe them · Dr = they owe us</p>
 
-      <div className="mt-8 flex items-center justify-between gap-3 border-t border-line pt-4 text-sm text-muted">
+      <div className="mt-8 flex items-center justify-between gap-3 border-t border-line pb-2 pr-20 pt-4 text-sm text-muted">
         <span>
           {ledger.length > 0
             ? `${ledger.length} entries — archive hides this party but keeps its khata.`

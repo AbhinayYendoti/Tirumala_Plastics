@@ -46,7 +46,9 @@ export function ExpenseForm({
             key={value}
             className={cx(
               "flex cursor-pointer flex-col items-center gap-1 rounded-xl border px-2 py-2.5 text-xs font-medium transition active:scale-95",
-              cat === value ? "border-maroon bg-maroon text-white" : "border-line bg-paper text-ink/80",
+              cat === value
+                ? "border-maroon bg-maroon text-white"
+                : "border-line bg-paper text-ink/80 hover:border-maroon/40 hover:bg-maroon/5 hover:text-maroon",
             )}
           >
             <input

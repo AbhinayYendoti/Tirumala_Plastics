@@ -228,7 +228,7 @@ function DuesCard({
         </ul>
       )}
       {rows.length > 6 && (
-        <Link href={`/parties?tab=${tone === "in" ? "receive" : "pay"}`} className="mt-2 block text-sm text-maroon">
+        <Link href={`/parties?tab=${tone === "in" ? "receive" : "pay"}`} className="mt-2 block text-sm text-maroon hover:underline">
           See all {rows.length}
         </Link>
       )}

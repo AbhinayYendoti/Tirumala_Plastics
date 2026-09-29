@@ -63,6 +63,16 @@ export async function updatePayment(id: number, _prev: ActionState, formData: Fo
   if (!parsed.success) return { error: firstError(parsed.error) };
   const { date, direction, amount, mode, reference, notes, partyId } = parsed.data;
   if (!partyId || partyId === "new") return { error: "Choose a party" };
+  // A payment made while saving a load belongs to that load's party.
+  const [current] = await db.select().from(payments).where(eq(payments.id, id));
+  const loadRef = current?.inwardLoadId
+    ? `inward load #${current.inwardLoadId}`
+    : current?.outwardLoadId
+      ? `outward load #${current.outwardLoadId}`
+      : null;
+  if (loadRef && Number(partyId) !== current.partyId) {
+    return { error: `This payment was made with ${loadRef}. Change the party on the load instead.` };
+  }
   await db
     .update(payments)
     .set({ date, direction, amount, mode, reference, notes, partyId: Number(partyId) })

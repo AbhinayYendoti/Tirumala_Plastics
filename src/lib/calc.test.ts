@@ -3,7 +3,9 @@ import {
   computeGst,
   computeLoad,
   deductionFromPercent,
+  financialYear,
   needsEwayBill,
+  nextInvoiceNo,
   partyBalance,
   removalMode,
   salaryBalance,
@@ -76,5 +78,19 @@ describe("format helpers", () => {
   it("handles month ranges and day shifts", () => {
     expect(monthRange("2026-02")).toEqual({ start: "2026-02-01", end: "2026-02-28" });
     expect(shiftDays("2026-03-01", -1)).toBe("2026-02-28");
+  });
+});
+
+describe("invoice numbers", () => {
+  it("uses the Indian financial year (April to March)", () => {
+    expect(financialYear("2026-04-01")).toBe("26-27");
+    expect(financialYear("2027-03-31")).toBe("26-27");
+    expect(financialYear("2026-03-31")).toBe("25-26");
+  });
+
+  it("continues the year's sequence and restarts each April", () => {
+    expect(nextInvoiceNo([], "2026-09-30")).toBe("TP/26-27/001");
+    expect(nextInvoiceNo(["TP/26-27/001", "TP/26-27/009", "custom-7", null, "TP/25-26/120"], "2026-09-30")).toBe("TP/26-27/010");
+    expect(nextInvoiceNo(["TP/26-27/210"], "2027-04-02")).toBe("TP/27-28/001");
   });
 });
