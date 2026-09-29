@@ -8,13 +8,14 @@ export default function SignInPage() {
   return (
     <AuthShell>
       <ClerkLoading>
-        <div className="flex h-[26rem] flex-col items-center justify-center gap-3 rounded-2xl border border-line bg-paper shadow-xl shadow-maroon/5">
+        <div className="flex h-[26rem] flex-col items-center justify-center gap-3 rounded-3xl border border-line bg-paper shadow-xl shadow-maroon/5">
           <Spinner size="lg" className="text-maroon" />
           <span className="text-sm text-muted">Preparing sign in…</span>
         </div>
       </ClerkLoading>
       <ClerkLoaded>
-        <div className="animate-fade-in rounded-2xl bg-paper shadow-xl shadow-maroon/5">
+        {/* The card itself is styled in src/lib/clerk-theme.ts, so it matches the rest of the app. */}
+        <div className="animate-fade-in">
           <SignIn />
         </div>
       </ClerkLoaded>
