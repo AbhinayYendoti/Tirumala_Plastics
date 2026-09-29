@@ -1,0 +1,253 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ivory: #fdf8f0;
+  --color-paper: #ffffff;
+  --color-ink: #2a1a14;
+  --color-muted: #7a6a5f;
+  --color-line: #eadfce;
+  --color-maroon: #6b1a0e;
+  --color-maroon-dark: #521409;
+  --color-gold: #c9982f;
+  --color-saffron: #e0782d;
+  --color-inflow: #1f7a4d;
+  --color-outflow: #b4351f;
+  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
+  --font-serif: var(--font-lora), Georgia, serif;
+
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+
+  --animate-fade-up: fade-up 220ms var(--ease-out-soft) both;
+  --animate-fade-in: fade-in 180ms ease-out both;
+  --animate-scale-in: scale-in 180ms var(--ease-out-soft) both;
+  --animate-toast-in: toast-in 240ms var(--ease-out-soft) both;
+  --animate-flash: flash 600ms ease-out;
+  --animate-pop: pop 320ms var(--ease-out-soft) both;
+  --animate-row-out: row-out 220ms ease-in forwards;
+  --animate-sheet-in: sheet-in 260ms var(--ease-out-soft) both;
+  --animate-sheet-out: sheet-out 180ms ease-in forwards;
+  --animate-fade-out: fade-out 180ms ease-in forwards;
+
+  @keyframes sheet-in {
+    from {
+      transform: translateY(100%);
+    }
+  }
+  @keyframes sheet-out {
+    to {
+      transform: translateY(100%);
+    }
+  }
+  @keyframes fade-out {
+    to {
+      opacity: 0;
+    }
+  }
+
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+  }
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes scale-in {
+    from {
+      opacity: 0;
+      transform: translateY(6px) scale(0.92);
+    }
+  }
+  @keyframes toast-in {
+    from {
+      opacity: 0;
+      transform: translateY(16px) scale(0.98);
+    }
+  }
+  @keyframes flash {
+    from {
+      background-color: color-mix(in srgb, var(--color-gold) 28%, transparent);
+    }
+  }
+  @keyframes pop {
+    0% {
+      transform: scale(0.4);
+      opacity: 0;
+    }
+    70% {
+      transform: scale(1.15);
+      opacity: 1;
+    }
+  }
+  @keyframes row-out {
+    to {
+      opacity: 0;
+      transform: translateX(24px);
+    }
+  }
+}
+
+/* ---------- Motion primitives ---------- */
+
+.skeleton {
+  border-radius: 0.6rem;
+  background: linear-gradient(
+    100deg,
+    color-mix(in srgb, var(--color-line) 55%, transparent) 30%,
+    color-mix(in srgb, var(--color-line) 100%, white 20%) 50%,
+    color-mix(in srgb, var(--color-line) 55%, transparent) 70%
+  );
+  background-size: 250% 100%;
+  animation: shimmer 1.2s linear infinite;
+}
+@keyframes shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -150% 0;
+  }
+}
+
+/* Children of .stagger rise in one after another (first 10 only, the rest appear together). */
+.stagger > * {
+  animation: fade-up 240ms var(--ease-out-soft) both;
+}
+.stagger > *:nth-child(2) { animation-delay: 25ms; }
+.stagger > *:nth-child(3) { animation-delay: 50ms; }
+.stagger > *:nth-child(4) { animation-delay: 75ms; }
+.stagger > *:nth-child(5) { animation-delay: 100ms; }
+.stagger > *:nth-child(6) { animation-delay: 125ms; }
+.stagger > *:nth-child(7) { animation-delay: 150ms; }
+.stagger > *:nth-child(8) { animation-delay: 175ms; }
+.stagger > *:nth-child(9) { animation-delay: 200ms; }
+.stagger > *:nth-child(n + 10) { animation-delay: 225ms; }
+
+/* Thin gold bar across the top while a page is loading. */
+.nav-progress {
+  position: fixed;
+  inset: 0 0 auto 0;
+  height: 3px;
+  z-index: 100;
+  pointer-events: none;
+  transform-origin: left;
+  background: linear-gradient(90deg, var(--color-gold), var(--color-saffron));
+  box-shadow: 0 0 8px color-mix(in srgb, var(--color-gold) 60%, transparent);
+  transition:
+    transform 400ms var(--ease-out-soft),
+    opacity 300ms ease;
+}
+
+/* ---------- Emblem (sign-in hero, splash) ---------- */
+
+.emblem-anim .ring path {
+  stroke-dasharray: 160;
+  stroke-dashoffset: 160;
+  animation: draw 800ms var(--ease-out-soft) forwards;
+}
+.emblem-anim .ring path:nth-child(2) { animation-delay: 120ms; }
+.emblem-anim .ring path:nth-child(3) { animation-delay: 240ms; }
+.emblem-anim .crown > * {
+  transform-box: fill-box;
+  transform-origin: bottom center;
+  animation: rise 420ms var(--ease-out-soft) both;
+}
+.emblem-anim .crown > :nth-child(5) { animation-delay: 250ms; }
+.emblem-anim .crown > :nth-child(4) { animation-delay: 320ms; }
+.emblem-anim .crown > :nth-child(3) { animation-delay: 390ms; }
+.emblem-anim .crown > :nth-child(2) { animation-delay: 460ms; }
+.emblem-anim .crown > :nth-child(1) { animation-delay: 530ms; }
+.emblem-anim .namam {
+  animation: fade-up 500ms var(--ease-out-soft) 650ms both;
+}
+.emblem-anim .tilak {
+  transform-box: fill-box;
+  transform-origin: top center;
+  animation:
+    grow 380ms var(--ease-out-soft) 950ms both,
+    glow 1.6s ease-in-out 1.3s 1;
+}
+.emblem-pulse {
+  animation: pulse-soft 1.6s ease-in-out infinite;
+}
+@keyframes draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scaleY(0.6);
+  }
+}
+@keyframes grow {
+  from {
+    transform: scaleY(0);
+  }
+}
+@keyframes glow {
+  50% {
+    filter: drop-shadow(0 0 6px #f2913d);
+  }
+}
+@keyframes pulse-soft {
+  50% {
+    transform: scale(0.94);
+    opacity: 0.75;
+  }
+}
+
+.tracking-in {
+  animation: tracking-in 700ms var(--ease-out-soft) 400ms both;
+}
+@keyframes tracking-in {
+  from {
+    letter-spacing: 0.35em;
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *:not(.spinner),
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background: var(--color-ivory);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
+}
+
+input,
+select,
+textarea {
+  font-size: 16px; /* stops iOS zooming into fields */
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: white;
+  }
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+}

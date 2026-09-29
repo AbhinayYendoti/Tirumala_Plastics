@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Tirumala Plastics emblem">
+  <circle cx="100" cy="100" r="96" fill="#6B1A0E"/>
+  <!-- thin gold ring broken into three arcs: a quiet nod to recycling -->
+  <g fill="none" stroke="#D4A63A" stroke-width="3" stroke-linecap="round">
+    <path d="M115.28 13.34 A88 88 0 0 1 182.69 130.1"/>
+    <path d="M167.41 156.57 A88 88 0 0 1 32.59 156.57"/>
+    <path d="M17.31 130.1 A88 88 0 0 1 84.72 13.34"/>
+  </g>
+  <!-- kireetam (crown) -->
+  <g fill="#D4A63A">
+    <path d="M100 22 L105 34 L95 34 Z"/>
+    <path d="M94 37 H106 L109 47 H91 Z"/>
+    <path d="M89 50 H111 L115 62 H85 Z"/>
+    <path d="M83 65 H117 L122 78 H78 Z"/>
+    <rect x="72" y="81" width="56" height="9" rx="2.5"/>
+  </g>
+  <g fill="#6B1A0E">
+    <circle cx="100" cy="85.5" r="2.4"/>
+    <circle cx="88" cy="85.5" r="1.6"/>
+    <circle cx="112" cy="85.5" r="1.6"/>
+  </g>
+  <!-- srivari namam -->
+  <path d="M73 98 H87 Q87 134 100 144 Q113 134 113 98 H127 Q126 142 100 160 Q74 142 73 98 Z" fill="#FFF8EE"/>
+  <path d="M100 100 Q104 116 100 138 Q96 116 100 100 Z" fill="#F2913D"/>
+</svg>
