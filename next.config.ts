@@ -2,7 +2,8 @@ import type { NextConfig } from "next";
 
 // Sent with every response. The app is private and never embedded elsewhere.
 const securityHeaders = [
-  { key: "X-Frame-Options", value: "DENY" },
+  // SAMEORIGIN: other sites can never embed the app; the app itself may (e.g. layout checks).
+  { key: "X-Frame-Options", value: "SAMEORIGIN" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },

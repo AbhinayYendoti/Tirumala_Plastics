@@ -3,10 +3,14 @@ import type { ClerkProvider } from "@clerk/nextjs";
 
 type Props = ComponentProps<typeof ClerkProvider>;
 
+// Same 48px height for the Google button, email field and Continue, and one focus ring everywhere.
+const FIELD_H = "!h-12 !min-h-12 !max-h-none"; // Clerk caps inputs with max-height: 36px
+const FOCUS_RING = "focus-visible:!outline-none focus-visible:!ring-2 focus-visible:!ring-maroon/40 focus-visible:!ring-offset-2";
+
 /**
- * Makes Clerk's sign-in card look like part of the register.
- * Borders and surfaces are set explicitly per element: Clerk derives them from
- * `colorBorder` at ~10% opacity, which made the Google button and divider invisible on white.
+ * Clerk's sign-in form, restyled to sit inside our AuthCard (src/components/auth-hero.tsx).
+ * Clerk's own card chrome is removed; every visible element is styled explicitly, because
+ * Clerk derives borders from its variables at ~10% opacity (invisible on white).
  */
 export const clerkAppearance: Props["appearance"] = {
   variables: {
@@ -27,33 +31,35 @@ export const clerkAppearance: Props["appearance"] = {
     borderRadius: "0.75rem",
   },
   elements: {
-    rootBox: "w-full",
-    cardBox: "!w-full !max-w-none !rounded-3xl !border !border-line !bg-paper !shadow-xl !shadow-maroon/5",
-    card: "!rounded-none !border-0 !bg-transparent !px-6 !pb-6 !pt-7 !shadow-none sm:!px-8",
-    header: "!gap-1.5",
-    headerTitle: "!font-serif !text-[1.6rem] !font-normal !leading-tight !text-ink",
+    rootBox: "!w-full !max-w-full",
+    cardBox: "!w-full !max-w-full !rounded-none !border-0 !bg-transparent !shadow-none",
+    card: "!w-full !max-w-full !gap-6 !rounded-none !border-0 !bg-transparent !px-6 !pb-6 !pt-6 !shadow-none sm:!px-7 lg:!pt-5",
+
+    header: "!items-start !gap-1 !text-left",
+    headerTitle: "!font-serif !text-[1.625rem] !font-normal !leading-tight !text-ink",
     headerSubtitle: "!text-[0.95rem] !text-muted",
 
+    main: "!gap-5",
     socialButtons: "!gap-2",
-    socialButtonsBlockButton:
-      "!h-12 !rounded-xl !border !border-line !bg-paper !shadow-sm !transition hover:!border-maroon/40 hover:!bg-maroon/5 active:!scale-[0.98]",
+    socialButtonsBlockButton: `${FIELD_H} !rounded-xl !border !border-line !bg-paper !shadow-none !transition hover:!border-maroon/40 hover:!bg-maroon/5 active:!scale-[0.99] ${FOCUS_RING}`,
     socialButtonsBlockButtonText: "!text-[15px] !font-medium !text-ink",
     socialButtonsProviderIcon: "!h-5 !w-5",
 
-    dividerRow: "!my-1",
+    dividerRow: "!my-0",
     dividerLine: "!bg-line",
-    dividerText: "!text-xs !uppercase !tracking-widest !text-muted",
+    dividerText: "!px-3 !text-[11px] !font-medium !uppercase !tracking-[0.2em] !text-muted",
 
-    formFieldLabel: "!text-sm !font-medium !text-ink/80",
-    formFieldInput:
-      "!h-12 !rounded-xl !border !border-line !bg-paper !px-3.5 !text-base !text-ink !shadow-none !transition focus:!border-maroon focus:!ring-2 focus:!ring-maroon/15",
-    formButtonPrimary:
-      "!h-12 !rounded-xl !bg-maroon !text-[15px] !font-medium !normal-case !text-white !shadow-md !shadow-maroon/20 !transition hover:!bg-maroon-dark active:!scale-[0.98]",
+    form: "!gap-4",
+    formFieldLabel: "!mb-1.5 !text-sm !font-medium !text-ink/80",
+    formFieldInput: `${FIELD_H} !rounded-xl !border !border-line !bg-paper !px-3.5 !text-base !text-ink !shadow-none !transition placeholder:!text-muted/60 hover:!border-maroon/30 focus:!border-maroon focus:!ring-4 focus:!ring-maroon/10`,
+    formButtonPrimary: `${FIELD_H} !rounded-xl !bg-maroon !text-[15px] !font-medium !normal-case !text-white !shadow-sm !shadow-maroon/20 !transition hover:!bg-maroon-dark active:!scale-[0.99] ${FOCUS_RING}`,
     formResendCodeLink: "!text-maroon",
-    otpCodeFieldInput: "!rounded-lg !border !border-line",
+    otpCodeFieldInput: "!rounded-lg !border !border-line focus:!border-maroon",
     identityPreviewEditButton: "!text-maroon",
+    formFieldAction: "!text-maroon hover:!text-maroon-dark",
 
-    footer: "!rounded-b-3xl !border-t !border-line !bg-ivory/60 !bg-none",
+    // "Secured by Clerk" / development badge: a quiet strip at the bottom of the same card.
+    footer: "!mt-0 !rounded-none !border-t !border-line !bg-ivory/50 !bg-none !px-6 !py-3 sm:!px-7",
     footerActionText: "!text-muted",
     footerActionLink: "!font-medium !text-maroon hover:!text-maroon-dark",
   },
@@ -65,8 +71,8 @@ export const clerkLocalization: Props["localization"] = {
       // Clerk shows the *Combined* texts when sign-in and sign-up share one form.
       title: "Welcome back",
       titleCombined: "Welcome back",
-      subtitle: "Sign in to open the register",
-      subtitleCombined: "Sign in to open the register",
+      subtitle: "Sign in to open today's register",
+      subtitleCombined: "Sign in to open today's register",
     },
   },
 };

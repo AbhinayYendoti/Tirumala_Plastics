@@ -1,13 +1,14 @@
 import { SignOutButton } from "@clerk/nextjs";
 import { ShieldAlert } from "lucide-react";
-import { AuthShell } from "@/components/auth-hero";
+import { AuthCard, AuthShell } from "@/components/auth-hero";
 
 export const metadata = { title: "Not allowed" };
 
 export default function NotAllowed() {
   return (
     <AuthShell>
-      <div className="rounded-2xl border border-line bg-paper px-6 py-8 text-center shadow-xl shadow-maroon/5">
+      <AuthCard>
+      <div className="px-6 py-8 text-center sm:px-7">
         <span className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-outflow/10 text-outflow">
           <ShieldAlert />
         </span>
@@ -19,6 +20,7 @@ export default function NotAllowed() {
           </button>
         </SignOutButton>
       </div>
+      </AuthCard>
     </AuthShell>
   );
 }

@@ -1,5 +1,16 @@
 @import "tailwindcss";
 
+/*
+ * next/font sets --font-geist-sans / --font-lora on <body>, not on :root.
+ * "inline" makes font-sans / font-serif use those variables directly on each element;
+ * a plain @theme resolved them on :root, where they don't exist, so every heading
+ * silently fell back to the system font.
+ */
+@theme inline {
+  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
+  --font-serif: var(--font-lora), Georgia, serif;
+}
+
 @theme {
   --color-ivory: #fdf8f0;
   --color-paper: #ffffff;
@@ -12,9 +23,6 @@
   --color-saffron: #e0782d;
   --color-inflow: #1f7a4d;
   --color-outflow: #b4351f;
-  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
-  --font-serif: var(--font-lora), Georgia, serif;
-
   --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
 
   --animate-fade-up: fade-up 220ms var(--ease-out-soft) both;
@@ -229,7 +237,7 @@ html {
 body {
   background: var(--color-ivory);
   color: var(--color-ink);
-  font-family: var(--font-sans);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
 }
 
