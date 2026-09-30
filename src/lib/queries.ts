@@ -1,6 +1,8 @@
 import { and, asc, desc, eq, gte, lte, sql, type AnyColumn, type SQL } from "drizzle-orm";
 import { db } from "@/db";
 import {
+  type AttendanceStatus,
+  attendance,
   type Expense,
   expenses,
   inwardLoads,
@@ -11,7 +13,16 @@ import {
   salaryTxns,
   workers,
 } from "@/db/schema";
-import { INVOICE_PREFIX, financialYear, nextInvoiceNo, partyBalance, salaryBalance } from "@/lib/calc";
+import {
+  type AttendanceCounts,
+  INVOICE_PREFIX,
+  financialYear,
+  monthEarnings,
+  nextInvoiceNo,
+  partyBalance,
+  salaryBalance,
+} from "@/lib/calc";
+import { monthRange } from "@/lib/format";
 
 export type LoadKind = "inward" | "outward";
 export type Range = { from: string; to: string };
@@ -46,7 +57,8 @@ export async function usageCount(kind: "party" | "worker" | "material", id: numb
               + (select count(*) from ${outwardLoads} where party_id = ${id})
               + (select count(*) from ${payments} where party_id = ${id}) as n`
       : kind === "worker"
-        ? sql`select count(*) as n from ${salaryTxns} where worker_id = ${id}`
+        ? sql`select (select count(*) from ${salaryTxns} where worker_id = ${id})
+                + (select count(*) from ${attendance} where worker_id = ${id}) as n`
         : sql`select (select count(*) from ${inwardLoads} where material_id = ${id})
                 + (select count(*) from ${outwardLoads} where material_id = ${id}) as n`;
   const res = await db.execute<{ n: string }>(q);
@@ -310,8 +322,52 @@ export async function expenseTotals(range: Range) {
 
 // ---------- Workers ----------
 
+type WorkerLike = { id: number; payBasis: "monthly" | "daily"; monthlySalary: number; dailyWage: number | null };
+
+/** Attendance totals per worker for a month. */
+async function attendanceCounts(month: string, workerId?: number) {
+  const { start, end } = monthRange(month);
+  const rows = await db
+    .select({ workerId: attendance.workerId, status: attendance.status, n: countAll() })
+    .from(attendance)
+    .where(
+      and(
+        gte(attendance.date, start),
+        lte(attendance.date, end),
+        workerId ? eq(attendance.workerId, workerId) : undefined,
+      ),
+    )
+    .groupBy(attendance.workerId, attendance.status);
+  const byWorker = new Map<number, AttendanceCounts>();
+  for (const r of rows) {
+    const c = byWorker.get(r.workerId) ?? { present: 0, half: 0, absent: 0 };
+    c[r.status] = r.n;
+    byWorker.set(r.workerId, c);
+  }
+  return byWorker;
+}
+
+/** Earned (from attendance), given and balance for one worker in one month. */
+export function payFor(
+  w: WorkerLike,
+  month: string,
+  counts: AttendanceCounts | undefined,
+  txns: { advances: number; salaryPaid: number; bonus: number },
+) {
+  const [y, m] = month.split("-").map(Number);
+  const daysInMonth = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  const c = counts ?? { present: 0, half: 0, absent: 0 };
+  const pay = monthEarnings({ ...w, daysInMonth, counts: c });
+  return {
+    counts: c,
+    ...pay,
+    ...txns,
+    balance: salaryBalance({ monthlySalary: pay.earned, advances: txns.advances, salaryPaid: txns.salaryPaid }),
+  };
+}
+
 export async function workersForMonth(month: string, includeInactive = false) {
-  const [list, txns] = await Promise.all([
+  const [list, txns, counts] = await Promise.all([
     db
       .select()
       .from(workers)
@@ -322,24 +378,20 @@ export async function workersForMonth(month: string, includeInactive = false) {
       .from(salaryTxns)
       .where(eq(salaryTxns.month, month))
       .groupBy(salaryTxns.workerId, salaryTxns.type),
+    attendanceCounts(month),
   ]);
   return list.map((w) => {
     const get = (t: string) => txns.find((x) => x.workerId === w.id && x.type === t)?.amount ?? 0;
-    const advances = get("advance");
-    const salaryPaid = get("salary");
-    const bonus = get("bonus");
     return {
       ...w,
-      advances,
-      salaryPaid,
-      bonus,
-      balance: salaryBalance({ monthlySalary: w.monthlySalary, advances, salaryPaid }),
+      ...payFor(w, month, counts.get(w.id), { advances: get("advance"), salaryPaid: get("salary"), bonus: get("bonus") }),
     };
   });
 }
 
-export async function workerDetail(id: number) {
-  const [[worker], txns] = await Promise.all([
+export async function workerDetail(id: number, month: string) {
+  const { start, end } = monthRange(month);
+  const [[worker], txns, marks, [{ marked }]] = await Promise.all([
     db.select().from(workers).where(eq(workers.id, id)),
     db
       .select()
@@ -347,8 +399,36 @@ export async function workerDetail(id: number) {
       .where(eq(salaryTxns.workerId, id))
       .orderBy(desc(salaryTxns.date), desc(salaryTxns.id))
       .limit(200),
+    db
+      .select({ date: attendance.date, status: attendance.status })
+      .from(attendance)
+      .where(and(eq(attendance.workerId, id), gte(attendance.date, start), lte(attendance.date, end))),
+    db.select({ marked: countAll() }).from(attendance).where(eq(attendance.workerId, id)),
   ]);
-  return worker ? { worker, txns } : null;
+  if (!worker) return null;
+  const counts: AttendanceCounts = { present: 0, half: 0, absent: 0 };
+  for (const m of marks) counts[m.status]++;
+  const monthTxns = txns.filter((t) => t.month === month);
+  const sum = (type: string) => monthTxns.filter((t) => t.type === type).reduce((s, t) => s + t.amount, 0);
+  const pay = payFor(worker, month, counts, {
+    advances: sum("advance"),
+    salaryPaid: sum("salary"),
+    bonus: sum("bonus"),
+  });
+  const days: Record<string, AttendanceStatus> = Object.fromEntries(marks.map((m) => [m.date, m.status]));
+  return { worker, txns, pay, days, attendanceMarked: marked };
+}
+
+/** The day's sheet: every working worker (who had joined by then) and their mark, if any. */
+export async function attendanceForDate(date: string) {
+  const [list, marks] = await Promise.all([
+    db.select().from(workers).where(eq(workers.active, true)).orderBy(asc(workers.name)),
+    db.select({ workerId: attendance.workerId, status: attendance.status }).from(attendance).where(eq(attendance.date, date)),
+  ]);
+  const byWorker = new Map(marks.map((m) => [m.workerId, m.status]));
+  return list
+    .filter((w) => !w.joinDate || w.joinDate <= date)
+    .map((w) => ({ ...w, status: byWorker.get(w.id) ?? null }));
 }
 
 // ---------- Dashboard / reports ----------

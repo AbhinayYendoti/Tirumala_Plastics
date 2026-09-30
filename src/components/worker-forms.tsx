@@ -1,13 +1,14 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import type { SalaryTxn, Worker } from "@/db/schema";
 import { saveSalaryTxn, saveWorker } from "@/lib/actions/money";
 import { ActionForm } from "./action-form";
 import { ModeField } from "./fields";
-import { Field, Input, NumberInput, Select } from "./ui";
+import { Button, Card, Field, Input, NumberInput, Select } from "./ui";
 
 export function WorkerForm({ worker, secondary }: { worker?: Worker; secondary?: ReactNode }) {
+  const [basis, setBasis] = useState<"monthly" | "daily">(worker?.payBasis ?? "monthly");
   return (
     <ActionForm
       action={saveWorker.bind(null, worker?.id ?? null)}
@@ -18,9 +19,21 @@ export function WorkerForm({ worker, secondary }: { worker?: Worker; secondary?:
         <Field label="Name">
           <Input name="name" defaultValue={worker?.name} required autoFocus={!worker} />
         </Field>
-        <Field label="Monthly salary ₹">
-          <NumberInput name="monthlySalary" defaultValue={worker?.monthlySalary} required />
+        <Field label="Paid">
+          <Select name="payBasis" value={basis} onChange={(e) => setBasis(e.target.value as "monthly" | "daily")}>
+            <option value="monthly">Monthly salary</option>
+            <option value="daily">Daily wage</option>
+          </Select>
         </Field>
+        {basis === "monthly" ? (
+          <Field label="Monthly salary ₹" hint="A day's pay is cut for each absent day">
+            <NumberInput key="monthly" name="monthlySalary" defaultValue={worker?.monthlySalary || undefined} required />
+          </Field>
+        ) : (
+          <Field label="Daily wage ₹" hint="Paid for each day marked present">
+            <NumberInput key="daily" name="dailyWage" defaultValue={worker?.dailyWage ?? undefined} required />
+          </Field>
+        )}
         <Field label="Work / role">
           <Input name="role" defaultValue={worker?.role ?? ""} placeholder="Grinder operator, loader, driver…" />
         </Field>
@@ -32,6 +45,30 @@ export function WorkerForm({ worker, secondary }: { worker?: Worker; secondary?:
         </Field>
       </div>
     </ActionForm>
+  );
+}
+
+/** The advance / payment form, kept behind a button so the worker page stays short. */
+export function AddSalaryTxn(props: { workerId: number; today: string; month: string; balance: number }) {
+  const [open, setOpen] = useState(false);
+  if (!open)
+    return (
+      <Button variant="secondary" className="w-full" onClick={() => setOpen(true)}>
+        + Advance / payment
+      </Button>
+    );
+  return (
+    <Card className="animate-fade-up">
+      <div className="mb-3 font-medium">Give advance / pay part salary</div>
+      <SalaryTxnForm
+        {...props}
+        secondary={
+          <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
+            Cancel
+          </Button>
+        }
+      />
+    </Card>
   );
 }
 

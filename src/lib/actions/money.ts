@@ -115,13 +115,28 @@ export async function saveExpense(id: number | null, _prev: ActionState, formDat
 
 // ---------- Workers & salary ----------
 
-const workerSchema = z.object({
-  name: z.string().trim().min(1, "Enter a name"),
-  phone: optionalText,
-  role: optionalText,
-  monthlySalary: positive,
-  joinDate: z.preprocess((v) => (v === "" ? null : v), isoDate.nullable().optional()).transform((v) => v ?? null),
-});
+const workerSchema = z
+  .object({
+    name: z.string().trim().min(1, "Enter a name"),
+    phone: optionalText,
+    role: optionalText,
+    payBasis: z.enum(["monthly", "daily"]).default("monthly"),
+    monthlySalary: optionalMoney,
+    dailyWage: optionalMoney,
+    joinDate: z.preprocess((v) => (v === "" ? null : v), isoDate.nullable().optional()).transform((v) => v ?? null),
+  })
+  .superRefine((v, ctx) => {
+    if (v.payBasis === "monthly" && !v.monthlySalary)
+      ctx.addIssue({ code: "custom", path: ["monthlySalary"], message: "Enter the monthly salary" });
+    if (v.payBasis === "daily" && !v.dailyWage)
+      ctx.addIssue({ code: "custom", path: ["dailyWage"], message: "Enter the daily wage" });
+  })
+  // Only the amount for the chosen pay type is kept.
+  .transform(({ monthlySalary, dailyWage, ...v }) => ({
+    ...v,
+    monthlySalary: v.payBasis === "monthly" ? monthlySalary! : 0,
+    dailyWage: v.payBasis === "daily" ? dailyWage! : null,
+  }));
 
 export async function saveWorker(id: number | null, _prev: ActionState, formData: FormData): Promise<ActionState> {
   const user = await requireUser();

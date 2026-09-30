@@ -1,6 +1,16 @@
 // Pure helpers for Undo snapshots (no DB access, so they are unit-testable).
 
-export const RECORD_KINDS = ["expense", "payment", "salary_txn", "inward_load", "outward_load", "party", "worker", "material"] as const;
+export const RECORD_KINDS = [
+  "expense",
+  "payment",
+  "salary_txn",
+  "attendance",
+  "inward_load",
+  "outward_load",
+  "party",
+  "worker",
+  "material",
+] as const;
 export type RecordKind = (typeof RECORD_KINDS)[number];
 export type SnapshotRow = Record<string, unknown> & { id: number };
 /** Everything a delete removed, in insert order, so Undo can put it back exactly. */

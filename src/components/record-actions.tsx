@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { startTransition, useTransition } from "react";
+import { startTransition, useTransition, type ReactNode } from "react";
 import { Archive, ArchiveRestore } from "lucide-react";
 import { deleteRecord, setArchived } from "@/lib/actions/records";
 import type { RecordKind, Snapshot } from "@/lib/snapshot";
@@ -98,8 +98,27 @@ export function RecordActions({
       });
     });
 
+  const deleteButton = (
+    <ConfirmDelete
+      onConfirm={async () => {
+        const ok = await remove(kind, id, { label, goTo: listHref });
+        if (ok) onDone?.();
+      }}
+    />
+  );
+  // A worker can be deleted even with history: it goes too, and Undo brings it all back.
+  const withDelete = (node: ReactNode) =>
+    kind === "worker" ? (
+      <div className="flex flex-wrap items-center gap-1">
+        {node}
+        {deleteButton}
+      </div>
+    ) : (
+      node
+    );
+
   if (archivable && archived) {
-    return (
+    return withDelete(
       <div className="flex items-center gap-2">
         <Badge tone="gold">Archived</Badge>
         <button
@@ -110,12 +129,12 @@ export function RecordActions({
         >
           {pending ? <Spinner size="sm" /> : <ArchiveRestore size={16} />} Restore
         </button>
-      </div>
+      </div>,
     );
   }
 
   if (archivable && removalMode(usage) === "archive") {
-    return (
+    return withDelete(
       <button
         type="button"
         onClick={() => toggleArchive(true)}
@@ -126,16 +145,9 @@ export function RecordActions({
         )}
       >
         {pending ? <Spinner size="sm" /> : <Archive size={16} />} Archive
-      </button>
+      </button>,
     );
   }
 
-  return (
-    <ConfirmDelete
-      onConfirm={async () => {
-        const ok = await remove(kind, id, { label, goTo: listHref });
-        if (ok) onDone?.();
-      }}
-    />
-  );
+  return deleteButton;
 }

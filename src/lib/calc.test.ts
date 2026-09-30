@@ -9,6 +9,7 @@ import {
   partyBalance,
   removalMode,
   salaryBalance,
+  monthEarnings,
 } from "./calc";
 import { amountInWords, monthRange, shiftDays } from "./format";
 
@@ -92,5 +93,32 @@ describe("invoice numbers", () => {
     expect(nextInvoiceNo([], "2026-09-30")).toBe("TP/26-27/001");
     expect(nextInvoiceNo(["TP/26-27/001", "TP/26-27/009", "custom-7", null, "TP/25-26/120"], "2026-09-30")).toBe("TP/26-27/010");
     expect(nextInvoiceNo(["TP/26-27/210"], "2027-04-02")).toBe("TP/27-28/001");
+  });
+});
+
+describe("monthEarnings", () => {
+  const counts = (present: number, half = 0, absent = 0) => ({ present, half, absent });
+
+  it("pays daily workers per day worked, half days at half", () => {
+    const r = monthEarnings({ payBasis: "daily", monthlySalary: 0, dailyWage: 600, daysInMonth: 30, counts: counts(20, 2, 3) });
+    expect(r.daysWorked).toBe(21);
+    expect(r.earned).toBe(12600);
+  });
+
+  it("cuts a day's pay per absence for monthly workers", () => {
+    const r = monthEarnings({ payBasis: "monthly", monthlySalary: 15000, dailyWage: null, daysInMonth: 30, counts: counts(24, 2, 1) });
+    expect(r.leaveDays).toBe(2);
+    expect(r.deduction).toBe(1000);
+    expect(r.earned).toBe(14000);
+  });
+
+  it("pays the full salary when nothing is marked", () => {
+    const r = monthEarnings({ payBasis: "monthly", monthlySalary: 15000, dailyWage: null, daysInMonth: 31, counts: counts(0) });
+    expect(r.earned).toBe(15000);
+  });
+
+  it("never goes below zero", () => {
+    const r = monthEarnings({ payBasis: "monthly", monthlySalary: 3000, dailyWage: null, daysInMonth: 28, counts: counts(0, 0, 28) });
+    expect(r.earned).toBe(0);
   });
 });

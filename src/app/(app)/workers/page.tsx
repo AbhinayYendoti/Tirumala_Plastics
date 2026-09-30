@@ -1,78 +1,124 @@
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { AttendanceSheet, DateJump } from "@/components/attendance";
 import type { SearchParams } from "@/components/range-filter";
-import { Badge, Card, Empty, LinkButton, PageHeader, Stat, cx } from "@/components/ui";
-import { formatMonth, monthOf, monthRange, rupees, shiftDays, todayIST } from "@/lib/format";
-import { workersForMonth } from "@/lib/queries";
+import { Badge, Card, Empty, LinkButton, PageHeader, cx } from "@/components/ui";
+import { formatMonth, monthOf, plain, rupees, shiftDays, todayIST } from "@/lib/format";
+import { attendanceForDate, workersForMonth } from "@/lib/queries";
 
 export const metadata = { title: "Workers" };
 
+const weekday = (date: string) =>
+  new Date(`${date}T00:00:00Z`).toLocaleDateString("en-IN", { weekday: "long", timeZone: "UTC" });
+
+const shortMonth = (month: string) =>
+  new Date(`${month}-01T00:00:00Z`).toLocaleDateString("en-IN", { month: "short", timeZone: "UTC" });
+
+/** One screen: mark the day's attendance for everyone and see what each worker is due this month. */
 export default async function WorkersPage({ searchParams }: { searchParams: SearchParams }) {
   const sp = await searchParams;
-  const current = monthOf(todayIST());
-  const month = typeof sp.month === "string" && /^\d{4}-\d{2}$/.test(sp.month) ? sp.month : current;
-  const { start, end } = monthRange(month);
-  const prev = monthOf(shiftDays(start, -1));
-  const next = monthOf(shiftDays(end, 1));
-  const showLeft = sp.show === "left";
-  const everyone = await workersForMonth(month, showLeft);
-  const rows = showLeft ? everyone.filter((w) => !w.active) : everyone;
-  const qs = (m: string) => `/workers?month=${m}${showLeft ? "&show=left" : ""}`;
+  const today = todayIST();
+  const date = typeof sp.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(sp.date) && sp.date <= today ? sp.date : today;
+  const month = monthOf(date);
+  const [sheet, everyone] = await Promise.all([attendanceForDate(date), workersForMonth(month, true)]);
+  const pay = new Map(everyone.map((w) => [w.id, w]));
+  const working = everyone.filter((w) => w.active);
+  const left = everyone.filter((w) => !w.active);
 
-  const payroll = rows.reduce((s, w) => s + w.monthlySalary, 0);
-  const given = rows.reduce((s, w) => s + w.advances + w.salaryPaid, 0);
-  const pending = rows.reduce((s, w) => s + Math.max(w.balance, 0), 0);
+  if (sp.show === "left") return <LeftList rows={left} month={month} />;
+
+  const due = working.reduce((s, w) => s + Math.max(w.balance, 0), 0);
+  const given = working.reduce((s, w) => s + w.advances + w.salaryPaid, 0);
+  const mon = shortMonth(month);
+  const href = (d: string) => `/workers?date=${d}`;
 
   return (
     <>
       <PageHeader
-        title="Workers & salary"
-        subtitle="Monthly salary sheet with advances"
+        title="Workers"
+        subtitle={date === today ? `Today, ${weekday(date)}` : weekday(date)}
         action={<LinkButton href="/workers/new">+ Worker</LinkButton>}
       />
       <div className="mb-4 flex items-center justify-between rounded-2xl border border-line bg-paper px-2 py-1.5">
-        <Link href={qs(prev)} className="rounded-lg p-2 text-maroon transition hover:bg-maroon/5" aria-label="Previous month">
+        <Link href={href(shiftDays(date, -1))} className="rounded-lg p-2 text-maroon transition hover:bg-maroon/5" aria-label="Previous day">
           <ChevronLeft />
         </Link>
-        <span className="font-serif text-lg">{formatMonth(month)}</span>
-        <Link
-          href={qs(next)}
-          className={cx(
-            "rounded-lg p-2 text-maroon transition hover:bg-maroon/5",
-            month >= current && "pointer-events-none opacity-30",
+        <div className="flex items-center gap-2">
+          <DateJump date={date} today={today} />
+          {date !== today && (
+            <Link href="/workers" className="text-sm text-maroon underline">
+              Today
+            </Link>
           )}
-          aria-label="Next month"
+        </div>
+        <Link
+          href={href(shiftDays(date, 1))}
+          className={cx("rounded-lg p-2 text-maroon transition hover:bg-maroon/5", date >= today && "pointer-events-none opacity-30")}
+          aria-label="Next day"
         >
           <ChevronRight />
         </Link>
       </div>
-      <div className="mb-4 flex gap-2">
-        {[
-          { key: "", label: "Working" },
-          { key: "left", label: "Left / archived" },
-        ].map((t) => (
-          <Link
-            key={t.key}
-            href={`/workers?month=${month}${t.key ? `&show=${t.key}` : ""}`}
-            className={cx(
-              "rounded-full border px-3.5 py-1.5 text-sm transition",
-              (sp.show ?? "") === t.key ? "border-maroon bg-maroon text-white" : "border-line bg-paper hover:border-maroon/40 hover:bg-maroon/5 hover:text-maroon",
-            )}
-          >
-            {t.label}
-          </Link>
-        ))}
-      </div>
-      <div className="stagger mb-4 grid grid-cols-3 gap-3">
-        <Stat label="Payroll" value={rupees(payroll)} />
-        <Stat label="Given" value={rupees(given)} />
-        <Stat label="Pending" value={rupees(pending)} tone={pending > 0 ? "out" : undefined} />
-      </div>
 
-      {rows.length === 0 ? (
+      {sheet.length === 0 ? (
         <Empty>
-          {showLeft ? "Nobody has been archived." : "No workers yet. Add your team to start the salary sheet."}
+          No workers yet.{" "}
+          <Link href="/workers/new" className="text-maroon underline">
+            Add your team
+          </Link>{" "}
+          to start marking attendance.
         </Empty>
+      ) : (
+        // Keyed by date so moving to another day starts from that day's marks.
+        <AttendanceSheet
+          key={date}
+          date={date}
+          workers={sheet.map((w) => {
+            const p = pay.get(w.id);
+            const days = p
+              ? w.payBasis === "daily"
+                ? `${plain(p.daysWorked)} days`
+                : `${plain(p.leaveDays)} absent`
+              : "";
+            const owed = p && p.balance > 0;
+            return {
+              id: w.id,
+              name: w.name,
+              status: w.status,
+              wage: w.payBasis === "daily" ? `${rupees(w.dailyWage)}/day` : `${rupees(w.monthlySalary)}/mo`,
+              summary: `${mon}: ${days} · ${owed ? `Due ${rupees(p.balance)}` : "Paid ✓"}`,
+              due: !!owed,
+            };
+          })}
+        />
+      )}
+
+      {working.length > 0 && (
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-line bg-paper px-4 py-3 text-sm">
+          <span>
+            {formatMonth(month)} due <span className={cx("font-semibold", due > 0 && "text-outflow")}>{rupees(due)}</span>
+          </span>
+          <span className="text-muted">Given {rupees(given)}</span>
+        </div>
+      )}
+      {left.length > 0 && (
+        <Link href={`/workers?date=${date}&show=left`} className="mt-4 block text-center text-sm text-muted underline">
+          Left / archived ({left.length})
+        </Link>
+      )}
+    </>
+  );
+}
+
+function LeftList({ rows, month }: { rows: { id: number; name: string; role: string | null }[]; month: string }) {
+  return (
+    <>
+      <PageHeader title="Left / archived" subtitle="Their salary and attendance history is kept" />
+      <Link href="/workers" className="mb-4 inline-flex items-center gap-1 text-sm text-maroon">
+        <ChevronLeft size={16} /> Back to workers
+      </Link>
+      {rows.length === 0 ? (
+        <Empty>Nobody has been archived.</Empty>
       ) : (
         <Card className="stagger divide-y divide-line p-0">
           {rows.map((w) => (
@@ -83,18 +129,9 @@ export default async function WorkersPage({ searchParams }: { searchParams: Sear
             >
               <div className="min-w-0 flex-1">
                 <div className="font-medium">{w.name}</div>
-                <div className="mt-0.5 text-xs text-muted">
-                  Salary {rupees(w.monthlySalary)} · Advance {rupees(w.advances)} · Paid {rupees(w.salaryPaid)}
-                </div>
+                {w.role && <div className="mt-0.5 text-xs text-muted">{w.role}</div>}
               </div>
-              {w.balance <= 0 ? (
-                <Badge tone="in">Paid</Badge>
-              ) : (
-                <div className="text-right">
-                  <div className="font-semibold text-outflow">{rupees(w.balance)}</div>
-                  <div className="text-[11px] text-muted">to give</div>
-                </div>
-              )}
+              <Badge tone="gold">Left</Badge>
               <ChevronRight size={16} className="text-muted" />
             </Link>
           ))}

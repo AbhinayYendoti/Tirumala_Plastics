@@ -1,5 +1,6 @@
 import { db } from "@/db";
 import {
+  attendance,
   expenses,
   inwardLoads,
   materials,
@@ -18,6 +19,7 @@ export const RECORD_TABLES = {
   expense: expenses,
   payment: payments,
   salary_txn: salaryTxns,
+  attendance,
   inward_load: inwardLoads,
   outward_load: outwardLoads,
   party: parties,

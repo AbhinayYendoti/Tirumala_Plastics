@@ -59,6 +59,38 @@ export function salaryBalance(p: { monthlySalary: number; advances: number; sala
   return round2(p.monthlySalary - p.advances - p.salaryPaid);
 }
 
+export type AttendanceCounts = { present: number; half: number; absent: number };
+
+/**
+ * What a worker earned in a month from attendance.
+ * - daily:   wage × days worked (a half day is 0.5).
+ * - monthly: salary less one day's pay (salary ÷ days in the month) per absence. Days left
+ *            unmarked (Sundays, holidays, or before attendance was used) are paid.
+ */
+export function monthEarnings(p: {
+  payBasis: "monthly" | "daily";
+  monthlySalary: number;
+  dailyWage: number | null;
+  daysInMonth: number;
+  counts: AttendanceCounts;
+}) {
+  const { present, half, absent } = p.counts;
+  if (p.payBasis === "daily") {
+    const daysWorked = present + half / 2;
+    return { daysWorked, leaveDays: 0, perDay: p.dailyWage ?? 0, deduction: 0, earned: round2(daysWorked * (p.dailyWage ?? 0)) };
+  }
+  const leaveDays = absent + half / 2;
+  const perDay = p.monthlySalary / p.daysInMonth;
+  const deduction = round2(Math.min(leaveDays * perDay, p.monthlySalary));
+  return {
+    daysWorked: present + half / 2,
+    leaveDays,
+    perDay: round2(perDay),
+    deduction,
+    earned: round2(p.monthlySalary - deduction),
+  };
+}
+
 /** Indian financial year label for a date: April 2026 – March 2027 → "26-27". */
 export function financialYear(isoDate: string) {
   const [y, m] = isoDate.split("-").map(Number);

@@ -26,6 +26,7 @@ vi.mock("next/navigation", () => ({
 import { and, eq, inArray, like, sql } from "drizzle-orm";
 import { db } from "@/db";
 import * as s from "@/db/schema";
+import { setAttendance, settleMonth } from "@/lib/actions/attendance";
 import { saveLoad } from "@/lib/actions/loads";
 import { saveExpense, savePayment, saveSalaryTxn, saveWorker, updatePayment } from "@/lib/actions/money";
 import { saveMaterial, saveParty } from "@/lib/actions/parties";
@@ -64,6 +65,7 @@ async function cleanup() {
   const ws = await db.select({ id: s.workers.id }).from(s.workers).where(like(s.workers.name, "E2E %"));
   if (ws.length) {
     await db.delete(s.salaryTxns).where(inArray(s.salaryTxns.workerId, ws.map((w) => w.id)));
+    await db.delete(s.attendance).where(inArray(s.attendance.workerId, ws.map((w) => w.id)));
     await db.delete(s.workers).where(inArray(s.workers.id, ws.map((w) => w.id)));
   }
   await db.delete(s.expenses).where(eq(s.expenses.createdBy, EMAIL));
@@ -220,6 +222,37 @@ describe.skipIf(onlyCleanup)("business flows", () => {
     expect(wk).toMatchObject({ name: "E2E Suresh K", active: true });
   });
 
+  // markAllPresent is not exercised here: it would also mark the real workers in this database.
+  it("attendance: daily wage, monthly leave cut, settle", async () => {
+    expect((await run(saveWorker.bind(null, null), { name: "E2E Ramu", payBasis: "daily", dailyWage: "" })).error).toBeTruthy();
+    const w = await run(saveWorker.bind(null, null), { name: "E2E Ramu", payBasis: "daily", dailyWage: 500, monthlySalary: 9999 });
+    ids.dailyWorker = idFrom(w.redirect, /workers\/(\d+)/);
+    const [dw] = await db.select().from(s.workers).where(eq(s.workers.id, ids.dailyWorker));
+    expect(dw).toMatchObject({ payBasis: "daily", dailyWage: 500, monthlySalary: 0 });
+
+    expect(await setAttendance(ids.dailyWorker, TODAY, "present")).toEqual({ ok: true });
+    expect((await q.workerDetail(ids.dailyWorker, MONTH))!.pay).toMatchObject({ daysWorked: 1, earned: 500, balance: 500 });
+    // re-marking the same day updates it, never duplicates
+    await setAttendance(ids.dailyWorker, TODAY, "half");
+    expect((await q.attendanceForDate(TODAY)).find((x) => x.id === ids.dailyWorker)!.status).toBe("half");
+    expect((await q.workerDetail(ids.dailyWorker, MONTH))!.pay.earned).toBe(250);
+
+    expect((await setAttendance(ids.dailyWorker, "2999-01-01", "present")).ok).toBe(false);
+
+    expect(await settleMonth(ids.dailyWorker, MONTH, "cash")).toEqual({ ok: true, amount: 250 });
+    expect((await q.workerDetail(ids.dailyWorker, MONTH))!.pay.balance).toBe(0);
+    expect((await settleMonth(ids.dailyWorker, MONTH, "cash")).ok).toBe(false);
+
+    // monthly worker: one absence cuts one day's pay (16000 salary from the previous test)
+    await setAttendance(ids.worker, TODAY, "absent");
+    const [y, m] = MONTH.split("-").map(Number);
+    const perDay = 16000 / new Date(Date.UTC(y, m, 0)).getUTCDate();
+    const row = (await q.workersForMonth(MONTH)).find((x) => x.id === ids.worker)!;
+    expect(row.earned).toBeCloseTo(16000 - perDay, 2);
+    await setAttendance(ids.worker, TODAY, null);
+    expect((await q.workersForMonth(MONTH)).find((x) => x.id === ids.worker)!.earned).toBe(16000);
+  });
+
   it("dashboard & report queries reflect the data", async () => {
     const sum = await q.periodSummary(RANGE);
     expect(sum.inward.count).toBeGreaterThanOrEqual(2);
@@ -287,6 +320,23 @@ describe.skipIf(onlyCleanup)("business flows", () => {
     const temp = await run(saveParty.bind(null, null), { name: "E2E Temp Party", type: "buyer", stateCode: "37" });
     const tempId = idFrom(temp.redirect, /parties\/(\d+)/);
     expect((await deleteRecord("party", tempId)).ok).toBe(true);
+
+    // A worker with history can be deleted: salary and attendance go with it, and Undo restores all of it.
+    const tw = await run(saveWorker.bind(null, null), { name: "E2E Temp Worker", payBasis: "daily", dailyWage: 500 });
+    const twId = idFrom(tw.redirect, /workers\/(\d+)/);
+    await run(saveSalaryTxn.bind(null, null), { workerId: twId, date: TODAY, month: MONTH, type: "advance", amount: 200, mode: "cash" });
+    expect((await setAttendance(twId, TODAY, "present")).ok).toBe(true);
+    const wd = await deleteRecord("worker", twId);
+    expect(wd.ok).toBe(true);
+    if (!wd.ok) return;
+    expect(wd.note).toBe("with 1 salary entry and 1 attendance day");
+    expect(await db.select().from(s.workers).where(eq(s.workers.id, twId))).toHaveLength(0);
+    expect(await db.select().from(s.attendance).where(eq(s.attendance.workerId, twId))).toHaveLength(0);
+    const wu = await restoreApi(new Request("http://x", { method: "POST", body: JSON.stringify(wd.snapshot) }));
+    expect(await wu.json()).toEqual({ restored: 3 });
+    expect((await q.workerDetail(twId, MONTH))!.pay.earned).toBe(500);
+    expect((await deleteRecord("worker", twId)).ok).toBe(true);
+
     expect((await restoreApi(new Request("http://x", { method: "POST", body: "not json" }))).status).toBe(400);
     expect(
       (await restoreApi(new Request("http://x", { method: "POST", body: JSON.stringify([{ table: "users", rows: [{ id: 1 }] }]) }))).status,

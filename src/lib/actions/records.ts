@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
-import { materials, parties, payments, workers } from "@/db/schema";
+import { attendance, materials, parties, payments, salaryTxns, workers } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { usageCount } from "@/lib/queries";
 import { RECORD_TABLES } from "@/lib/records";
@@ -19,6 +19,7 @@ const LABEL: Record<RecordKind, string> = {
   expense: "expense",
   payment: "payment",
   salary_txn: "salary entry",
+  attendance: "attendance mark",
   inward_load: "load",
   outward_load: "load",
   party: "party",
@@ -29,8 +30,9 @@ const LABEL: Record<RecordKind, string> = {
 export async function deleteRecord(kind: RecordKind, id: number): Promise<DeleteResult> {
   const user = await requireUser();
 
-  // Parties, workers and materials with history must be archived instead, so khata and payroll stay intact.
-  if (kind === "party" || kind === "worker" || kind === "material") {
+  // Parties and materials with history must be archived instead, so the khata stays intact.
+  // A worker can always be deleted: their salary and attendance entries go with them (Undo brings all back).
+  if (kind === "party" || kind === "material") {
     const used = await usageCount(kind, id);
     if (used > 0) return { ok: false, error: `This ${LABEL[kind]} has ${used} entries — archive it instead.` };
   }
@@ -51,6 +53,28 @@ export async function deleteRecord(kind: RecordKind, id: number): Promise<Delete
       snapshot.push({ table: "payment", rows: linked as Row[] });
       note = "with its on-the-spot payment";
     }
+  } else if (kind === "worker") {
+    const [txns, marks] = await Promise.all([
+      db.select().from(salaryTxns).where(eq(salaryTxns.workerId, id)),
+      db.select().from(attendance).where(eq(attendance.workerId, id)),
+    ]);
+    // One batch = one transaction: the worker and their history go together or not at all.
+    const [, , removed] = await db.batch([
+      db.delete(attendance).where(eq(attendance.workerId, id)),
+      db.delete(salaryTxns).where(eq(salaryTxns.workerId, id)),
+      db.delete(workers).where(eq(workers.id, id)).returning(),
+    ]);
+    const [worker] = removed;
+    if (!worker) return { ok: false, error: "Already deleted" };
+    // Insert order for Undo: the worker first, then what refers to it.
+    snapshot.push({ table: "worker", rows: [worker as Row] });
+    if (txns.length) snapshot.push({ table: "salary_txn", rows: txns as Row[] });
+    if (marks.length) snapshot.push({ table: "attendance", rows: marks as Row[] });
+    const parts = [
+      txns.length && `${txns.length} salary ${txns.length === 1 ? "entry" : "entries"}`,
+      marks.length && `${marks.length} attendance ${marks.length === 1 ? "day" : "days"}`,
+    ].filter(Boolean);
+    if (parts.length) note = `with ${parts.join(" and ")}`;
   } else {
     const table = TABLES[kind];
     const [row] = await db.delete(table).where(eq(table.id, id)).returning();

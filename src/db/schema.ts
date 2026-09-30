@@ -20,6 +20,9 @@ export const partyType = pgEnum("party_type", ["supplier", "buyer", "both"]);
 export const payDirection = pgEnum("pay_direction", ["paid", "received"]);
 export const payMode = pgEnum("pay_mode", ["cash", "upi", "bank", "cheque"]);
 export const salaryTxnType = pgEnum("salary_txn_type", ["advance", "salary", "bonus"]);
+// monthly: fixed salary, less a day's pay per absence. daily: paid per day worked.
+export const payBasis = pgEnum("pay_basis", ["monthly", "daily"]);
+export const attendanceStatus = pgEnum("attendance_status", ["present", "half", "absent"]);
 export const expenseCategory = pgEnum("expense_category", [
   "diesel",
   "electricity",
@@ -136,7 +139,9 @@ export const workers = pgTable("workers", {
   name: text("name").notNull(),
   phone: text("phone"),
   role: text("role"),
-  monthlySalary: money("monthly_salary").notNull(),
+  payBasis: payBasis("pay_basis").notNull().default("monthly"),
+  monthlySalary: money("monthly_salary").notNull(), // 0 for daily-wage workers
+  dailyWage: money("daily_wage"),
   joinDate: date("join_date", { mode: "string" }),
   active: boolean("active").notNull().default(true),
   createdAt: createdAt(),
@@ -159,6 +164,22 @@ export const salaryTxns = pgTable(
     createdAt: createdAt(),
   },
   (t) => [index("salary_worker_month_idx").on(t.workerId, t.month)],
+);
+
+export const attendance = pgTable(
+  "attendance",
+  {
+    id: serial("id").primaryKey(),
+    workerId: integer("worker_id")
+      .notNull()
+      .references(() => workers.id),
+    date: date("date", { mode: "string" }).notNull(),
+    status: attendanceStatus("status").notNull(),
+    markedBy: text("marked_by"),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  // One mark per worker per day; re-marking updates it.
+  (t) => [uniqueIndex("attendance_worker_date_uq").on(t.workerId, t.date), index("attendance_date_idx").on(t.date)],
 );
 
 export const expenses = pgTable(
@@ -194,4 +215,6 @@ export type OutwardLoad = typeof outwardLoads.$inferSelect;
 export type Payment = typeof payments.$inferSelect;
 export type Worker = typeof workers.$inferSelect;
 export type SalaryTxn = typeof salaryTxns.$inferSelect;
+export type Attendance = typeof attendance.$inferSelect;
+export type AttendanceStatus = Attendance["status"];
 export type Expense = typeof expenses.$inferSelect;

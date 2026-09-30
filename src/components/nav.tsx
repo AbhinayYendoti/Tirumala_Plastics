@@ -8,6 +8,7 @@ import {
   ArrowUpFromLine,
   BarChart3,
   Boxes,
+  CalendarCheck,
   Fuel,
   HandCoins,
   Home,
@@ -37,7 +38,7 @@ const QUICK = [
   { href: "/outward/new", label: "Outward load", icon: ArrowUpFromLine },
   { href: "/expenses#add", label: "Expense", icon: Fuel },
   { href: "/payments/new", label: "Payment", icon: HandCoins },
-  { href: "/workers", label: "Salary / Advance", icon: UserRound },
+  { href: "/workers", label: "Attendance", icon: CalendarCheck },
 ];
 
 function isActive(pathname: string, href: string) {

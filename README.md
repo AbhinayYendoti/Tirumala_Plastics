@@ -1,6 +1,6 @@
 # Tirumala Plastics — daily register
 
-Private web app for **Tirumala Plastics**, Kottavalasa. It records scrap coming in, material going out, party khata, worker salaries and daily expenses. It works on a phone and can be installed to the home screen.
+Private web app for **Tirumala Plastics**, Kothavalasa. It records scrap coming in, material going out, party khata, worker salaries and daily expenses. It works on a phone and can be installed to the home screen.
 
 **Stack:** Next.js 15 (App Router, server actions) · Neon Postgres + Drizzle ORM · Clerk auth · Tailwind CSS v4. Everything, backend included, runs as one Vercel deployment.
 
@@ -12,7 +12,7 @@ Private web app for **Tirumala Plastics**, Kottavalasa. It records scrap coming 
 | **Inward** | Truck with scrap arrives: gross − tare = net, less deduction (kg or %) = billable × rate. Optionally record cash paid on the spot. Prints a weighment slip. |
 | **Outward** | Dispatch to a buyer with GST (CGST+SGST inside AP, IGST for other states), invoice no. and e-way bill (flagged above ₹50,000). Prints a tax invoice. |
 | **Payments / Parties** | Khata per supplier/buyer with a running balance. Filter by *To pay* and *To receive*. |
-| **Workers** | Monthly fixed-salary sheet: advances, salary paid, balance, month by month |
+| **Workers** | One screen to mark daily attendance (P / ½ / A, or everyone present in one tap); each worker's salary due for the month is calculated from it — daily wage × days worked, or monthly salary less absent days. Advances, payments and a per-worker attendance calendar live on the worker's page |
 | **Expenses** | One-tap diesel (litres), current bill (units, meter reading), repairs, transport, tea & food |
 | **Reports** | Any date range: material in/out, rough margin, output GST, expenses by head. Print or download CSV for Excel. |
 
@@ -51,5 +51,5 @@ No separate backend on Render is needed; server actions and route handlers run o
 ## Notes
 
 - Business details used on printouts live in `src/lib/business.ts`.
-- The logo is `public/logo.svg` (full) and `public/logo-mark.svg` (emblem): the Srivari namam under the kireetam, inside a three-arc ring.
+- The logo is the owner's TP emblem: `public/logo.png` (full, with the name) and `public/logo-mark.png` (emblem only, transparent). App icons in `public/` and `src/app/` are generated from it.
 - Yard stock is bought kg − sold kg per material. It does not subtract processing loss. If scrap is sold under a different material name (for example as granules), compare the totals.
