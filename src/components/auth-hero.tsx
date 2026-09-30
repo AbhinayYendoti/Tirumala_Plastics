@@ -47,7 +47,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
           </ul>
         </div>
         <p className="mt-10 hidden text-[11px] tracking-[0.2em] text-[#f3e3c3]/50 lg:block">
-          GSTIN {BUSINESS.gstin} · KOTTAVALASA, VIZIANAGARAM
+          GSTIN {BUSINESS.gstin} · KOTHAVALASA, VIZIANAGARAM
         </p>
       </section>
 

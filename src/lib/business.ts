@@ -2,7 +2,7 @@ export const BUSINESS = {
   legalName: "TIRUMALA PLASTICS",
   addressLines: [
     "000377, Devarapalli Road",
-    "Milk Collection Centre, Kottavalasa",
+    "Milk Collection Centre, Kothavalasa",
     "Devada, Vizianagaram, Andhra Pradesh - 535183",
   ],
   phone: "9866413413",

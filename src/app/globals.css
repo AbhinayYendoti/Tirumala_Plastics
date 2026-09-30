@@ -151,55 +151,25 @@
 
 /* ---------- Emblem (sign-in hero, splash) ---------- */
 
-.emblem-anim .ring path {
-  stroke-dasharray: 160;
-  stroke-dashoffset: 160;
-  animation: draw 800ms var(--ease-out-soft) forwards;
+.emblem-anim {
+  animation: emblem-in 700ms var(--ease-out-soft) both;
 }
-.emblem-anim .ring path:nth-child(2) { animation-delay: 120ms; }
-.emblem-anim .ring path:nth-child(3) { animation-delay: 240ms; }
-.emblem-anim .crown > * {
-  transform-box: fill-box;
-  transform-origin: bottom center;
-  animation: rise 420ms var(--ease-out-soft) both;
-}
-.emblem-anim .crown > :nth-child(5) { animation-delay: 250ms; }
-.emblem-anim .crown > :nth-child(4) { animation-delay: 320ms; }
-.emblem-anim .crown > :nth-child(3) { animation-delay: 390ms; }
-.emblem-anim .crown > :nth-child(2) { animation-delay: 460ms; }
-.emblem-anim .crown > :nth-child(1) { animation-delay: 530ms; }
-.emblem-anim .namam {
-  animation: fade-up 500ms var(--ease-out-soft) 650ms both;
-}
-.emblem-anim .tilak {
-  transform-box: fill-box;
-  transform-origin: top center;
-  animation:
-    grow 380ms var(--ease-out-soft) 950ms both,
-    glow 1.6s ease-in-out 1.3s 1;
+.emblem-anim img {
+  animation: emblem-spin 900ms var(--ease-out-soft) 150ms both;
 }
 .emblem-pulse {
   animation: pulse-soft 1.6s ease-in-out infinite;
 }
-@keyframes draw {
-  to {
-    stroke-dashoffset: 0;
-  }
-}
-@keyframes rise {
+@keyframes emblem-in {
   from {
     opacity: 0;
-    transform: translateY(10px) scaleY(0.6);
+    transform: scale(0.6);
   }
 }
-@keyframes grow {
+@keyframes emblem-spin {
   from {
-    transform: scaleY(0);
-  }
-}
-@keyframes glow {
-  50% {
-    filter: drop-shadow(0 0 6px #f2913d);
+    opacity: 0;
+    transform: rotate(-35deg) scale(0.85);
   }
 }
 @keyframes pulse-soft {
